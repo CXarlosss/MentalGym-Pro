@@ -1,20 +1,23 @@
 // src/app/dashboard/page.tsx
 'use client'
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../context/Au'
+import { useAuth } from '../../context/AuthContext'
 import { fetchUserProgress, fetchActiveChallenges, fetchRecentExercises } from '../../lib/api'
-import ProgressChart from '../../components/ProgressChart'
+import ProgressChart from '../../components/dashboard/ProgressChart'
 import ExerciseCard from '../../components/cards/ExerciseCard'
 import ChallengeItem from '../../components/exercises/ChallengeItem'
-import LoadingSpinner from '../../components/LoadingSpinner'
-import WelcomeBanner from '../../components/WelcomeBanner'
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
+import WelcomeBanner from '../../components/layout/WellcomeBanner'
 import StatsCard from '../../components/cards/StatsCard'
+import type { 
+  Exercise, 
+  Challenge, 
+  DashboardStats,
+  
+} from '../../types'
 
-type DashboardData = {
-  weeklyProgress: number[]
-  streak: number
-  totalExercises: number
-  averageScore: number
+// Definición específica para esta página
+type DashboardData = DashboardStats & {
   recentExercises: Exercise[]
   activeChallenges: Challenge[]
 }
@@ -37,13 +40,14 @@ export default function DashboardPage() {
         ])
 
         setData({
-          weeklyProgress: progress.weeklyData,
-          streak: progress.streak,
-          totalExercises: progress.totalCompleted,
-          averageScore: progress.averageScore,
-          recentExercises: exercises,
-          activeChallenges: challenges
-        })
+  weeklyProgress: progress.weeklyData,
+  streak: progress.streak,
+  totalExercises: progress.totalExercises, // ✅ sin error
+  averageScore: progress.averageScore,
+  recentExercises: exercises,
+  activeChallenges: challenges
+})
+
       } catch (err) {
         setError('Error al cargar los datos del dashboard')
         console.error(err)

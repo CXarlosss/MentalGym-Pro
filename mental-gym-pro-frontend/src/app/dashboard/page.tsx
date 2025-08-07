@@ -1,16 +1,16 @@
 // src/app/dashboard/page.tsx
 'use client'
-import { useAuth } from '@/context/AuthContext'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+// Importaciones corregidas (asegúrate de que los archivos existan en estas rutas)
+import { useAuth } from '../../context/AuthContext' // Ruta relativa ajustada
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card' // Ruta relativa
 import Link from 'next/link'
-import ProgressChart from '@/components/dashboard/ProgressChart'
-import RecentActivities from '@/components/dashboard/RecentActivities'
-import DailyQuote from '@/components/dashboard/DailyQuote'
-import LoadingSpinner from '@/components/LoadingSpinner'
-import { Button } from '@/components/ui/button'
+import ProgressChart from '../../components/dashboard/ProgressChart' // Ruta relativa
+import RecentActivities from '../../components/dashboard/RecentActivities' // Ruta relativa
+import DailyQuote from '../../components/dashboard/DailyQuote' // Ruta relativa
+import {LoadingSpinner} from '../../components/ui/LoadingSpinner' // Ruta relativa
+import { Button } from '../../components/ui/button' // Ruta relativa
 import { Trophy, BrainCircuit, Clock, Flame } from 'lucide-react'
-import useProtectedRoute from '@/hooks/useProtectedRoute'
-
+import useProtectedRoute from '../../hooks/useProtectedRoute' // Ruta relativa
 export default function DashboardPage() {
   const { user } = useAuth()
   const { loading } = useProtectedRoute()
@@ -161,7 +161,7 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="p-4">
+      <CardContent >
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm font-medium text-gray-600">{title}</p>
