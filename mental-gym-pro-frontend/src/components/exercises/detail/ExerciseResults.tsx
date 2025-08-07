@@ -1,7 +1,7 @@
 // src/components/exercises/detail/ExerciseResults.tsx
 import { TrophyIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import ProgressCircle from '@/components/progress/ProgressCircle'
-
+import { ExerciseResult, Exercise } from '@/types'
 export default function ExerciseResults({
   results,
   exercise,

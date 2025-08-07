@@ -1,8 +1,8 @@
-// src/components/exercises/detail/ExerciseSession.tsx
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useTimer } from 'react-timer-hook'
 import ProgressBar from '@/components/progress/ProgressBar'
+import { Exercise } from '@/types'
 
 type ExerciseSessionProps = {
   exercise: Exercise
@@ -14,13 +14,14 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
   const [progress, setProgress] = useState(0)
   const [score, setScore] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout>()
+  // ✅ CORRECCIÓN: Cambiamos el tipo de useRef a number | null
+const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startTimeRef = useRef<Date>(new Date())
   
   const expiryTimestamp = new Date()
   expiryTimestamp.setSeconds(expiryTimestamp.getSeconds() + (exercise.duration || 5) * 60)
   
-  const { seconds, minutes, isRunning, pause, resume } = useTimer({ 
+  const { seconds, minutes, pause } = useTimer({ 
     expiryTimestamp,
     onExpire: () => handleComplete()
   })
@@ -32,7 +33,12 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
 
   useEffect(() => {
     generateChallenge()
-    return () => clearTimeout(timerRef.current)
+    // La función de limpieza ahora es compatible con el tipo number | null
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current)
+      }
+    }
   }, [])
 
   const generateChallenge = () => {
@@ -42,6 +48,7 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
     setCurrentChallenge(challenge)
     
     // Muestra el número por 2 segundos
+    // ✅ CORRECCIÓN: setTimeout devuelve un number que es el tipo correcto para timerRef
     timerRef.current = setTimeout(() => {
       setCurrentChallenge('')
     }, 2000)
@@ -84,7 +91,7 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
         </div>
       </div>
       
-      <ProgressBar value={progress} className="mb-6" />
+      <ProgressBar value={progress} />
       
       <div className="text-center py-8">
         {currentChallenge ? (

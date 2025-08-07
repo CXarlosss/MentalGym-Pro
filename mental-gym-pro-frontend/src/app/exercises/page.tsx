@@ -8,7 +8,9 @@ import FilterPanel from '@/components/exercises/FilterPanel'
 import SearchHeader from '@/components/exercises/SearchHeader'
 import LoadingSkeleton from '@/components/exercises/LoadingSkeleton'
 import EmptyState from '@/components/EmptyState'
-
+import type { 
+  Exercise  
+} from '@/types'
 export default function ExercisesPage() {
   const { user } = useAuth()
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -144,7 +146,6 @@ export default function ExercisesPage() {
                   <ExerciseCard 
                     key={exercise._id} 
                     exercise={exercise} 
-                    variant="detailed"
                   />
                 ))}
               </div>

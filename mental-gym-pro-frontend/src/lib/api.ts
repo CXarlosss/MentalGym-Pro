@@ -1,54 +1,10 @@
-/**
- * @fileoverview Este archivo simula un servicio de API backend para el desarrollo
- * de la aplicación. Todas las funciones aquí son asíncronas y simulan
- * la latencia de red y posibles errores para probar la UI de forma aislada.
- */
-
-// ==============================================
-//           INTERFACES DE DATOS
-// ==============================================
-
-/** Define la estructura de un ejercicio. */
-export interface Exercise {
-  _id: string;
-  title: string;
-  description: string;
-  category: 'memoria' | 'logica' | 'atencion' | 'calculo';
-  difficulty: 'easy' | 'medium' | 'hard';
-  duration: number; // Duración en minutos
-  instructions: string[];
-  createdAt: string;
-    updatedAt: string
-
-}
-
-/** Define la estructura del resultado de un ejercicio. */
-export interface ExerciseResult {
-  _id: string;
-  sessionId: string;
-  score: number; // Por ejemplo, puntos obtenidos
-  timeSpent: number; // Tiempo en segundos
-  createdAt: string;
-  metadata: Record<string, unknown>; // Datos adicionales
-}
-
-/** Define la estructura del progreso del usuario. */
-export interface UserProgress {
-  weeklyData: number[] // Progreso por cada día de la semana
-  streak: number
-  totalExercises: number
-  averageScore: number
-}
-
-
-/** Define la estructura de un desafío activo. */
-export interface Challenge {
-  _id: string;
-  title: string;
-  description: string;
-  expiresAt: string;
-  participants: number;
-}
+// src/lib/api.ts
+import type { 
+  Exercise, 
+  Challenge,  // Importamos Challenge desde los tipos
+  UserProgress,
+  ExerciseResult
+} from '@/types'
 
 // ==============================================
 //             DATOS DE EJEMPLO
@@ -63,7 +19,6 @@ const mockExercises: Exercise[] = [
     category: 'memoria',
     difficulty: 'easy',
     duration: 5,
-    
     instructions: [
       'Memoriza el número que aparecerá en pantalla.',
       'Espera a que desaparezca.',
@@ -72,8 +27,7 @@ const mockExercises: Exercise[] = [
       'Completa 5 rondas para finalizar.'
     ],
     createdAt: '2023-05-15T10:00:00Z',
-        updatedAt: '2023-05-16T12:00:00Z', // ✅ Añadir esto
-
+    updatedAt: '2023-05-16T12:00:00Z'
   },
   {
     _id: '2',
@@ -90,8 +44,7 @@ const mockExercises: Exercise[] = [
       'Completa 10 rondas para finalizar el ejercicio.'
     ],
     createdAt: '2023-06-20T12:30:00Z',
-            updatedAt: '2023-05-16T12:00:00Z', // ✅ Añadir esto
-
+    updatedAt: '2023-05-16T12:00:00Z'
   },
   {
     _id: '3',
@@ -108,8 +61,7 @@ const mockExercises: Exercise[] = [
       'Completa 20 niveles para ganar.'
     ],
     createdAt: '2023-07-01T08:45:00Z',
-            updatedAt: '2023-05-16T12:00:00Z', // ✅ Añadir esto
-
+    updatedAt: '2023-05-16T12:00:00Z'
   },
   {
     _id: '4',
@@ -125,15 +77,14 @@ const mockExercises: Exercise[] = [
       'Responde a 15 silogismos para completar el desafío.'
     ],
     createdAt: '2023-08-10T14:20:00Z',
-            updatedAt: '2023-05-16T12:00:00Z', // ✅ Añadir esto
-
+    updatedAt: '2023-05-16T12:00:00Z'
   },
 ];
 
 // Datos de progreso de usuario simulados
 const mockUserProgress: UserProgress = {
-  weeklyData: [5, 8, 12, 10, 15, 18, 20], // Ejemplo de progreso semanal
-  streak: 7, // Días consecutivos
+  weeklyData: [5, 8, 12, 10, 15, 18, 20],
+  streak: 7,
   totalExercises: 45,
   averageScore: 85,
 };
@@ -144,95 +95,98 @@ const mockActiveChallenges: Challenge[] = [
     _id: 'ch-1',
     title: 'Maratón de Memoria',
     description: 'Supera 50 niveles del juego de memoria para unirte al podio.',
+    objective: "Completar 50 niveles",
+    durationDays: 30,
+    isCompleted: false,
+    exercises: ['1', '2', '3'],
     expiresAt: '2025-09-01T00:00:00Z',
     participants: 150,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     _id: 'ch-2',
     title: 'El Lógico',
     description: 'Resuelve 20 enigmas de lógica en el menor tiempo posible.',
+    objective: "Resolver 20 enigmas",
+    durationDays: 15,
+    isCompleted: false,
+    exercises: ['4', '5'],
     expiresAt: '2025-08-25T23:59:59Z',
     participants: 80,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    _id: 'ch-3',
+    title: 'Atención al Detalle',
+    description: 'Encuentra las diferencias en imágenes complejas.',
+    objective: "Completar 30 niveles",
+    durationDays: 7,
+    isCompleted: false,
+    exercises: ['6', '7'],
+    expiresAt: '', // Cadena vacía para desafíos sin fecha de expiración
+    participants: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
 ];
-
 
 // ==============================================
 //           FUNCIONES DE LA API
 // ==============================================
+export const fetchExercises = async (): Promise<Exercise[]> => {
+  await new Promise(resolve => setTimeout(resolve, 400));
+  return mockExercises;
+};
 
-/**
- * Simula la obtención del progreso de un usuario.
- * @returns {Promise<UserProgress>} El progreso del usuario.
- */
+export const login = async (email: string, password: string): Promise<{ token: string }> => {
+  if (email === 'test@example.com' && password === '123456') {
+    return { token: 'fake-jwt-token' };
+  }
+  throw new Error('Credenciales inválidas');
+};
+
+export const fetchExerciseCategories = async (): Promise<string[]> => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return Array.from(new Set(mockExercises.map(ex => ex.category)));
+};
+
 export const fetchUserProgress = async (): Promise<UserProgress> => {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simula latencia
+  await new Promise(resolve => setTimeout(resolve, 500));
   return mockUserProgress;
 };
 
-/**
- * Simula la obtención de los desafíos activos.
- * @returns {Promise<Challenge[]>} Una lista de desafíos activos.
- */
 export const fetchActiveChallenges = async (): Promise<Challenge[]> => {
-  await new Promise(resolve => setTimeout(resolve, 600)); // Simula latencia
+  await new Promise(resolve => setTimeout(resolve, 600));
   return mockActiveChallenges;
 };
 
-/**
- * Simula la obtención de los ejercicios recientes del usuario.
- * @param {number} limit El número de ejercicios a devolver.
- * @returns {Promise<Exercise[]>} Una lista de ejercicios completados recientemente.
- */
 export const fetchRecentExercises = async (limit: number): Promise<Exercise[]> => {
-  await new Promise(resolve => setTimeout(resolve, 400)); // Simula latencia
-  // Devuelve los ejercicios de ejemplo, limitados por el parámetro
+  await new Promise(resolve => setTimeout(resolve, 400));
   return mockExercises.slice(0, limit);
 };
 
-/**
- * Simula la obtención de un ejercicio por su ID.
- * @param {string} id El ID del ejercicio a buscar.
- * @returns {Promise<Exercise>} El ejercicio encontrado.
- * @throws {Error} Si el ejercicio no es encontrado (simulando un 404).
- */
 export const fetchExerciseById = async (id: string): Promise<Exercise> => {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simula latencia
+  await new Promise(resolve => setTimeout(resolve, 500));
   
-  // 1 de cada 10 peticiones fallan para simular errores de red
   if (Math.random() < 0.1) {
     throw new Error('Simulación de error de red o servidor.');
   }
   
   const exercise = mockExercises.find(ex => ex._id === id);
   if (!exercise) {
-    throw new Error(`Exercise with ID '${id}' not found. (Simulating 404)`);
+    throw new Error(`Exercise with ID '${id}' not found.`);
   }
   return exercise;
 };
 
-/**
- * Simula el inicio de una sesión de ejercicio.
- * @param {string} exerciseId El ID del ejercicio que se va a iniciar.
- * @returns {Promise<{ _id: string }>} Un objeto con el ID de la nueva sesión.
- */
 export const startExerciseSession = async (exerciseId: string): Promise<{ _id: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simula latencia
-  
-  // Se podría validar aquí si el exerciseId es válido en el futuro
+  await new Promise(resolve => setTimeout(resolve, 300));
   console.log(`Simulando inicio de sesión para el ejercicio ${exerciseId}`);
-  
-  // Devuelve un ID de sesión aleatorio para simular el backend
-  return { _id: `sess_${Math.random().toString(36).substr(2, 9)}` };
+  return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
 };
 
-/**
- * Simula el envío de los resultados de un ejercicio completado.
- * @param {string} sessionId El ID de la sesión de ejercicio.
- * @param {{ score: number; timeSpent: number; metadata: Record<string, unknown> }} data Los datos del resultado.
- * @returns {Promise<ExerciseResult>} El resultado del ejercicio completado.
- * @throws {Error} Si el sessionId es inválido (simulando un 400).
- */
 export const completeExercise = async (
   sessionId: string,
   data: {
@@ -241,16 +195,16 @@ export const completeExercise = async (
     metadata: Record<string, unknown>;
   }
 ): Promise<ExerciseResult> => {
-  await new Promise(resolve => setTimeout(resolve, 400)); // Simula latencia
+  await new Promise(resolve => setTimeout(resolve, 400));
   
   if (!sessionId || !sessionId.startsWith('sess_')) {
-    throw new Error('Invalid sessionId. (Simulating 400 Bad Request)');
+    throw new Error('Invalid sessionId.');
   }
   
   console.log(`Simulando finalización de sesión ${sessionId} con datos:`, data);
   
   return {
-    _id: `res_${Math.random().toString(36).substr(2, 9)}`,
+    _id: `res_${Math.random().toString(36).slice(2, 11)}`,
     sessionId,
     score: data.score,
     timeSpent: data.timeSpent,

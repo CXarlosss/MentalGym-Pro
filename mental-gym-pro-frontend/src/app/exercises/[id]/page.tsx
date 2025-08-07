@@ -5,12 +5,16 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { fetchExerciseById, startExerciseSession, completeExercise } from '@/lib/api'
 import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
-import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstructions'
+import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
 import ExerciseSession from '@/components/exercises/detail/ExerciseSession'
 import ExerciseResults from '@/components/exercises/detail/ExerciseResults'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import {LoadingSpinner} from '@/components/ui/LoadingSpinner'
 import { toast } from 'react-hot-toast'
-
+import type { 
+  Exercise, 
+  ExerciseResult
+  
+} from '@/types'
 type ExerciseStage = 'instructions' | 'session' | 'results'
 
 export default function ExerciseDetailPage() {

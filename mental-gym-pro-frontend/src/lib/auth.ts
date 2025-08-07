@@ -1,5 +1,5 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-// src/lib/auth.ts
 interface AuthResponse {
   user: {
     id: string
@@ -15,7 +15,7 @@ export const registerUser = async (data: {
   email: string
   password: string
 }): Promise<AuthResponse> => {
-  const response = await fetch('/api/auth/register', {
+  const response = await fetch(`${API_URL}/api/auth/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -35,7 +35,7 @@ export const loginUser = async (data: {
   email: string
   password: string
 }): Promise<AuthResponse> => {
-  const response = await fetch('/api/auth/login', {
+  const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -52,7 +52,7 @@ export const loginUser = async (data: {
 }
 
 export const logoutUser = async (token: string): Promise<void> => {
-  const response = await fetch('/api/auth/logout', {
+  const response = await fetch(`${API_URL}/api/auth/logout`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`
@@ -70,7 +70,7 @@ export const getCurrentUser = async (token: string): Promise<{
   email: string
   avatar?: string
 }> => {
-  const response = await fetch('/api/auth/me', {
+  const response = await fetch(`${API_URL}/api/auth/me`, {
     headers: {
       Authorization: `Bearer ${token}`
     }

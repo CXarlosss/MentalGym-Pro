@@ -1,4 +1,5 @@
 // src/components/ProgressBar.tsx
+// src/components/progress/ProgressBar.tsx
 export default function ProgressBar({ value }: { value: number }) {
   return (
     <div className="w-full bg-gray-200 rounded-full h-2">

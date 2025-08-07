@@ -1,5 +1,20 @@
 // src/components/auth/AuthForm.tsx
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline'
+import React from 'react'
+
+type AuthFormProps = {
+  name?: string
+  setName?: (name: string) => void
+  email: string
+  setEmail: (email: string) => void
+  password: string
+  setPassword: (password: string) => void
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void // ✅ aquí el cambio
+  loading: boolean
+  error: string
+  showNameField?: boolean
+  buttonText: string
+}
 
 export default function AuthForm({
   name = '',
@@ -13,19 +28,7 @@ export default function AuthForm({
   error,
   showNameField = false,
   buttonText
-}: {
-  name?: string
-  setName?: (name: string) => void
-  email: string
-  setEmail: (email: string) => void
-  password: string
-  setPassword: (password: string) => void
-  onSubmit: (e: React.FormEvent) => void
-  loading: boolean
-  error: string
-  showNameField?: boolean
-  buttonText: string
-}) {
+}: AuthFormProps) {
   return (
     <form className="mt-8 space-y-6" onSubmit={onSubmit}>
       {error && (
@@ -40,7 +43,7 @@ export default function AuthForm({
           </div>
         </div>
       )}
-      
+
       <div className="rounded-md shadow-sm space-y-4">
         {showNameField && (
           <div>
@@ -55,11 +58,11 @@ export default function AuthForm({
               className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
               placeholder="Nombre completo"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName?.(e.target.value)}
             />
           </div>
         )}
-        
+
         <div>
           <label htmlFor="email" className="sr-only">
             Email
@@ -76,7 +79,7 @@ export default function AuthForm({
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        
+
         <div>
           <label htmlFor="password" className="sr-only">
             Contraseña
