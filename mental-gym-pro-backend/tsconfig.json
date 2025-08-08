@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    /* Opciones básicas */
+    "target": "es2020",                                 /* Especifica la versión de ECMAScript para el código de salida. */
+    "module": "NodeNext",                              /* Especifica el sistema de módulos para el código de salida. */
+    "lib": ["es2020"],                                 /* Especifica los archivos de biblioteca a incluir en la compilación. */
+    "rootDir": "./src",                                /* Especifica la carpeta raíz que contiene los archivos de origen. */
+    "outDir": "./dist",                                /* Redirige la salida de la compilación a un directorio. */
+    "esModuleInterop": true,                           /* Habilita la interoperabilidad entre los módulos de CommonJS y ES. Esto es crucial para tu error. */
+    "allowSyntheticDefaultImports": true,              /* Permite las importaciones por defecto sintéticas de módulos sin exportación por defecto. */
+    "forceConsistentCasingInFileNames": true,          /* Asegura que las referencias a los archivos utilicen las mayúsculas/minúsculas correctas. */
+
+    /* Opciones de tipo de verificación estricta */
+    "strict": true,                                    /* Habilita todas las opciones de verificación de tipos estrictas. */
+    "noImplicitAny": true,                             /* Lanza un error en expresiones y declaraciones con un tipo 'any' implícito. */
+    "skipLibCheck": true,                              /* Ignora la verificación de tipo de todos los archivos de declaración de la biblioteca. */
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}
