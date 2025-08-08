@@ -30,22 +30,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar sesión al cargar
   useEffect(() => {
-    async function loadUser() {
-      try {
-        const token = localStorage.getItem('token')
-        if (token) {
-          const userData = await getCurrentUser(token)
-          setUser(userData)
-        }
-      } catch (error) {
-        console.error('Error loading user:', error)
-        localStorage.removeItem('token')
-      } finally {
-        setLoading(false)
+  async function loadUser() {
+    try {
+      const token = localStorage.getItem('token')
+      const user = localStorage.getItem('user')                                                             
+
+      if (token && user) {
+        setUser(JSON.parse(user))
       }
+    } catch (error) {
+      console.error('Error loading user:', error)
+      localStorage.removeItem('token')
+    } finally {
+      setLoading(false) // ✅ esto debe ir dentro del bloque que sí carga user
     }
-    loadUser()
-  }, [])
+  }
+  loadUser()
+}, [])
 
   const register = async (name: string, email: string, password: string) => {
     try {

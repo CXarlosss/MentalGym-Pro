@@ -5,6 +5,7 @@ import type {
   UserProgress,
   ExerciseResult
 } from '@/types'
+import type { User } from "@/types"
 
 // ==============================================
 //             DATOS DE EJEMPLO
@@ -140,12 +141,41 @@ export const fetchExercises = async (): Promise<Exercise[]> => {
   return mockExercises;
 };
 
-export const login = async (email: string, password: string): Promise<{ token: string }> => {
-  if (email === 'test@example.com' && password === '123456') {
-    return { token: 'fake-jwt-token' };
+export const login = async (
+  email: string,
+  password: string
+): Promise<{ token: string; user: User }> => {
+  const validUsers = [
+    {
+      email: 'test@example.com',
+      password: '123456',
+      name: 'Carlos Test',
+    },
+    {
+      email: 'carlos@test.com',
+      password: '123456',
+      name: 'Carlos Dev',
+    }
+  ];
+
+  const user = validUsers.find(u => u.email === email && u.password === password);
+
+  if (user) {
+    return {
+      token: 'fake-jwt-token',
+      user: {
+        _id: `user-${Math.random().toString(36).slice(2, 9)}`,
+        name: user.name,
+        email: user.email,
+        avatar: `https://i.pravatar.cc/150?u=${user.email}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    };
   }
+
   throw new Error('Credenciales inválidas');
-};
+}
 
 export const fetchExerciseCategories = async (): Promise<string[]> => {
   await new Promise(resolve => setTimeout(resolve, 300));
@@ -211,4 +241,15 @@ export const completeExercise = async (
     createdAt: new Date().toISOString(),
     metadata: data.metadata,
   };
-};
+};export const getCurrentUser = async (token: string): Promise<User> => {
+  await new Promise(resolve => setTimeout(resolve, 300))
+
+  // Intenta leer el usuario de localStorage
+  const user = localStorage.getItem('user')
+
+  if (!token || !user) {
+    throw new Error('No hay sesión válida')
+  }
+
+  return JSON.parse(user)
+}

@@ -1,9 +1,12 @@
+// @ts-nocheck
 import express from "express";
 import { body, validationResult } from "express-validator";
 import { register, login } from "../controllers/auth.controller.js";
+import protect from "../middleware/auth.js";
 
 const router = express.Router();
 
+// Ruta: /api/auth/register
 router.post(
   "/register",
   [
@@ -21,6 +24,7 @@ router.post(
   register
 );
 
+// Ruta: /api/auth/login
 router.post(
   "/login",
   [
@@ -36,5 +40,17 @@ router.post(
   },
   login
 );
+
+// Ruta protegida: /api/auth/me
+router.get("/me", protect, (req, res) => {
+  res.status(200).json({
+    user: {
+      id: req.user._id,
+      name: req.user.username,
+      email: req.user.email,
+      avatar: req.user.avatar,
+    },
+  });
+});
 
 export default router;

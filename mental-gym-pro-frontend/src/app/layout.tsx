@@ -1,26 +1,23 @@
-// src/app/layout.tsx
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import '../styles/globals.css'
+import { Inter } from 'next/font/google'
+import Header from '@/components/layout/Header'
 import { AuthProvider } from '@/context/AuthContext'
-
+import Footer from '@/components/layout/Footer'
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'MentalGym Pro',
-  description: 'Entrena tu mente con ejercicios científicos'
+  description: 'Tu gimnasio mental',
 }
 
-export default function RootLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body className={inter.className}>
         <AuthProvider>
-          {children}
+          <Header />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

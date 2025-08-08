@@ -9,12 +9,13 @@ type AuthFormProps = {
   setEmail: (email: string) => void
   password: string
   setPassword: (password: string) => void
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void // ✅ aquí el cambio
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   loading: boolean
   error: string
   showNameField?: boolean
-  buttonText: string
+  buttonText: React.ReactNode // ← aquí está el cambio
 }
+
 
 export default function AuthForm({
   name = '',
