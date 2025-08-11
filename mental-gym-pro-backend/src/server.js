@@ -10,6 +10,8 @@ import userRoutes from "./routes/user.routes.js";
 import routineRoutes from "./routes/routine.routes.js";
 import exerciseRoutes from "./routes/exercise.routes.js";
 import mentalRoutes from "./routes/mental.routes.js";
+import sessionRoutes from "./routes/exerciseSessions.routes.js";
+
 
 // Cargar variables de entorno
 dotenv.config();
@@ -36,7 +38,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/routines", routineRoutes);
 app.use("/api/exercises", exerciseRoutes);
 app.use("/api/mental", mentalRoutes);
-
+app.use("/api/sessions", sessionRoutes);
 // Levantar servidor
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

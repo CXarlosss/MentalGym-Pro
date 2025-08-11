@@ -4,12 +4,22 @@ export interface BaseEntity {
   createdAt: string
   updatedAt: string
 }
-
 export interface User extends BaseEntity {
   name: string
   email: string
   password?: string
   avatar?: string
+}
+// src/types/index.ts
+export interface ExerciseSession {
+  _id: string
+  user: string
+  exercise: { _id: string; name: string; muscleGroup: string }
+  score: number
+  durationMin: number
+  playedAt: string
+  createdAt: string
+  updatedAt: string
 }
 
 // Usamos las categorías de tu API mock (memoria, logica, atencion, calculo)
@@ -67,5 +77,98 @@ export interface UserProgress {
   totalExercises: number
   averageScore: number
 }
+export interface ActivityEntry {
+  _id: string
+  date: string        // YYYY-MM-DD (día local)
+  steps: number       // o la métrica principal que quieras
+  minutes?: number    // opcional: minutos de actividad
+  calories?: number   // opcional
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WeeklyActivitySummary {
+  totalSteps: number
+  avgSteps: number
+  bestDay: { date: string; steps: number } | null
+  streak: number // días consecutivos con registro (>0 pasos)
+  last7Days: Array<{ date: string; steps: number }>
+}
 
 export type DashboardStats = UserProgress
+// --- Fuerza ---
+export type LiftTag = 'pecho'|'espalda'|'pierna'|'hombro'|'brazo'|'core'|'tirón'|'empuje'|'cuádriceps'|'isquios'|'glúteo'|'trapecio';
+
+export type LiftSet = {
+  _id: string;
+  exercise: string;         // "Press banca"
+  weight: number;           // kg
+  reps: number;
+  rpe?: number;             // 6–10
+  rir?: number;             // 0–5
+  marker?: 'warmup'|'top'|'backoff';
+  note?: string;
+  createdAt: string;
+  tags?: LiftTag[];
+};
+
+export type WorkoutEntry = {
+  _id: string;
+  date: string;             // YYYY-MM-DD
+  sets: LiftSet[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RoutineTemplate = {
+  _id: string;
+  name: string;             // "Full Body A"
+  days: Array<{
+    name: string;           // "Día A"
+    blocks: Array<{
+      exercise: string;
+      tags?: LiftTag[];
+      targetScheme?: string; // "5x5 @80%"
+      note?: string;
+    }>;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+  favorite?: boolean;
+};
+
+export type PrRecord = {
+  exercise: string;
+  bestWeight: number;
+  bestEstimated1RM: number;
+  date: string;
+};
+
+export type WorkoutWeeklySummary = {
+  last7Days: Array<{date:string; totalSets:number; totalVolume:number}>;
+  totalVolume: number;
+  topVolumeDay: {date:string; totalVolume:number} | null;
+  streak: number;
+};
+export type GroupVolume = { group: LiftTag; sets: number }
+
+// --- Cardio ---
+export type CardioType = 'pasos'|'running'|'bike'|'swim';
+export type CardioEntry = {
+  _id: string;
+  date: string;
+  type: CardioType;
+  minutes: number;
+  distanceKm?: number;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CardioGoals = {
+  dailySteps?: number;         // e.g. 10000
+  weeklySessions?: number;     // e.g. 3
+};
+
+export type Badge = { code: string; title: string; unlockedAt: string };
