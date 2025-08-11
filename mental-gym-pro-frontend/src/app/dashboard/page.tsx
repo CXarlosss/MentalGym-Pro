@@ -1,22 +1,32 @@
+// src/app/dashboard/page.tsx
 'use client'
-import { useAuth } from '../../context/AuthContext'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
+
+import { useEffect } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import Link from 'next/link'
-import ProgressChart from '../../components/dashboard/ProgressChart'
-import RecentActivities from '../../components/dashboard/RecentActivities'
-import DailyQuote from '../../components/dashboard/DailyQuote'
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
-import { Button } from '../../components/ui/button'
+import ProgressChart from '@/components/dashboard/ProgressChart'
+import RecentActivities from '@/components/dashboard/RecentActivities'
+import DailyQuote from '@/components/dashboard/DailyQuote'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Button } from '@/components/ui/button'
 import { Trophy, BrainCircuit, Clock, Flame, ArrowRight } from 'lucide-react'
-import useProtectedRoute from '../../hooks/useProtectedRoute'
 
 export default function DashboardPage() {
-  const { user } = useAuth()
-const { loading } = useProtectedRoute()
+  const { user, loading } = useAuth()
+  const router = useRouter()
 
-if (loading || !user) {
-  return <LoadingSpinner fullScreen />
-}
+  // Redirección defensiva si no hay sesión una vez terminó de cargar
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login')
+    }
+  }, [loading, user, router])
+
+  if (loading || !user) {
+    return <LoadingSpinner fullScreen />
+  }
 
   return (
     <main className="p-4 md:p-8 space-y-8 bg-gray-50 min-h-screen">
@@ -57,30 +67,26 @@ if (loading || !user) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card>
-            <>
-              <CardHeader>
-                <CardTitle>Progreso Semanal</CardTitle>
-                <CardDescription>Tus resultados de los últimos 7 días</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72">
-                  <ProgressChart data={stats.weeklyProgress} />
-                </div>
-              </CardContent>
-            </>
+            <CardHeader>
+              <CardTitle>Progreso Semanal</CardTitle>
+              <CardDescription>Tus resultados de los últimos 7 días</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-72">
+                <ProgressChart data={stats.weeklyProgress} />
+              </div>
+            </CardContent>
           </Card>
         </div>
         <div>
           <Card>
-            <>
-              <CardHeader>
-                <CardTitle>Actividad Reciente</CardTitle>
-                <CardDescription>Tus últimos ejercicios completados</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RecentActivities activities={recentActivities} />
-              </CardContent>
-            </>
+            <CardHeader>
+              <CardTitle>Actividad Reciente</CardTitle>
+              <CardDescription>Tus últimos ejercicios completados</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentActivities activities={recentActivities} />
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -92,19 +98,17 @@ if (loading || !user) {
         </div>
         <div>
           <Card>
-            <>
-              <CardHeader>
-                <CardTitle>Tus Objetivos</CardTitle>
-                <CardDescription>Próximos desafíos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <GoalItem title="Completa 5 ejercicios de memoria" progress={60} current={3} total={5} />
-                  <GoalItem title="Mantén la racha por 15 días" progress={80} current={12} total={15} />
-                  <GoalItem title="Mejora tu puntuación en patrones" progress={45} current={72} total={90} isScore />
-                </div>
-              </CardContent>
-            </>
+            <CardHeader>
+              <CardTitle>Tus Objetivos</CardTitle>
+              <CardDescription>Próximos desafíos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <GoalItem title="Completa 5 ejercicios de memoria" progress={60} current={3} total={5} />
+                <GoalItem title="Mantén la racha por 15 días" progress={80} current={12} total={15} />
+                <GoalItem title="Mejora tu puntuación en patrones" progress={45} current={72} total={90} isScore />
+              </div>
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -112,18 +116,18 @@ if (loading || !user) {
   )
 }
 
-// Datos temporales (fuera del componente)
+// Datos temporales
 const stats = {
   streak: 12,
   exercisesCompleted: 34,
   challenges: 6,
-  weeklyProgress: [65, 59, 80, 81, 56, 55, 70]
+  weeklyProgress: [65, 59, 80, 81, 56, 55, 70],
 }
 
 const recentActivities = [
   { id: 1, name: 'Memoria numérica', score: 85, date: '2023-06-15' },
   { id: 2, name: 'Patrones lógicos', score: 72, date: '2023-06-14' },
-  { id: 3, name: 'Atención visual', score: 91, date: '2023-06-12' }
+  { id: 3, name: 'Atención visual', score: 91, date: '2023-06-12' },
 ]
 
 // StatCard
@@ -133,7 +137,7 @@ function StatCard({
   icon,
   description,
   isDecimal = false,
-  trend
+  trend,
 }: {
   title: string
   value: string | number
@@ -145,35 +149,29 @@ function StatCard({
   const trendColors = {
     up: 'text-green-500',
     down: 'text-red-500',
-    neutral: 'text-gray-500'
-  }
+    neutral: 'text-gray-500',
+  } as const
 
   return (
     <Card>
-      <>
-        <CardContent>
-          <div className="flex justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">{title}</p>
-              <p className="text-3xl font-bold mt-2">
-                {isDecimal ? value : Math.round(Number(value))}
-              </p>
-              <div className="flex items-center mt-2">
-                {trend && (
-                  <span className={`text-sm ${trendColors[trend]} flex items-center`}>
-                    {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
-                    {!isDecimal && trend !== 'neutral' && ' 5%'}
-                  </span>
-                )}
-                <span className="text-xs text-gray-500 ml-2">{description}</span>
-              </div>
-            </div>
-            <div className="p-3 rounded-lg bg-indigo-50 text-indigo-600">
-              {icon}
+      <CardContent>
+        <div className="flex justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500">{title}</p>
+            <p className="text-3xl font-bold mt-2">{isDecimal ? value : Math.round(Number(value))}</p>
+            <div className="flex items-center mt-2">
+              {trend && (
+                <span className={`text-sm ${trendColors[trend]} flex items-center`}>
+                  {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
+                  {!isDecimal && trend !== 'neutral' && ' 5%'}
+                </span>
+              )}
+              <span className="text-xs text-gray-500 ml-2">{description}</span>
             </div>
           </div>
-        </CardContent>
-      </>
+          <div className="p-3 rounded-lg bg-indigo-50 text-indigo-600">{icon}</div>
+        </div>
+      </CardContent>
     </Card>
   )
 }
@@ -184,7 +182,7 @@ function GoalItem({
   progress,
   current,
   total,
-  isScore = false
+  isScore = false,
 }: {
   title: string
   progress: number
@@ -196,14 +194,10 @@ function GoalItem({
     <div className="space-y-2">
       <p className="font-medium text-gray-800">{title}</p>
       <div className="w-full bg-gray-200 rounded-full h-2.5">
-        <div
-          className="bg-indigo-600 h-2.5 rounded-full"
-          style={{ width: `${progress}%` }}
-        ></div>
+        <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${progress}%` }} />
       </div>
       <p className="text-sm text-gray-600">
-        {isScore ? `${current} puntos` : `${current} de ${total}`}
-        <span className="text-indigo-600 ml-2">{progress}%</span>
+        {isScore ? `${current} puntos` : `${current} de ${total}`} <span className="text-indigo-600 ml-2">{progress}%</span>
       </p>
     </div>
   )

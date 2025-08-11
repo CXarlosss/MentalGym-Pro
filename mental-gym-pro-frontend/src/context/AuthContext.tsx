@@ -65,22 +65,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = async (email: string, password: string) => {
-    try {
-      setLoading(true)
-      const { user, token } = await loginUser({ email, password })
-      localStorage.setItem('token', token)
-      setUser(user)
-      toast.success('¡Bienvenido de nuevo!')
-      router.push('/dashboard')
-    } catch (error) {
-      console.error('Login error:', error)
-      toast.error(error instanceof Error ? error.message : 'Error en el login')
-      throw error
-    } finally {
-      setLoading(false)
-    }
+const login = async (email: string, password: string) => {
+  try {
+    setLoading(true);
+    console.log("[AuthContext] Intentando login con:", email);
+
+    const { user, token } = await loginUser({ email, password });
+    console.log("[AuthContext] Respuesta de API:", { user, token });
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    setUser(user);
+
+    toast.success("¡Bienvenido de nuevo!");
+
+    console.log("[AuthContext] Login correcto. Redirigiendo a /dashboard...");
+    // 👇 importante: replace + siguiente tick
+   setTimeout(() => {
+  console.log("[AuthContext] Antes de replace, href:", window.location.href);
+  router.replace("/dashboard");
+  setTimeout(() => {
+    console.log("[AuthContext] Después de replace, href:", window.location.href);
+  }, 200);
+}, 0);
+
+  } catch (error) {
+    console.error("[AuthContext] Error en login:", error);
+    toast.error(error instanceof Error ? error.message : "Error en el login");
+    throw error;
+  } finally {
+    setLoading(false);
   }
+};
+
+
 
   const logout = async () => {
     try {
