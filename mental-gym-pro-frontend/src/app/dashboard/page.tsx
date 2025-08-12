@@ -1,277 +1,332 @@
-// src/app/dashboard/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import Link from "next/link";
+
+import {
+  fetchUserProgress,
+  fetchActiveChallenges,
+  fetchRecentExercises,
+  fetchExercises,
+  fetchExerciseCategories,
+} from "@/lib/api";
 import ProgressChart from "@/components/dashboard/ProgressChart";
-import RecentActivities from "@/components/dashboard/RecentActivities";
-import DailyQuote from "@/components/dashboard/DailyQuote";
+import ExerciseCard from "@/components/cards/ExerciseCard";
+import ChallengeItem from "@/components/exercises/ChallengeItem";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Button } from "@/components/ui/button";
-import { Trophy, BrainCircuit, Clock, Flame, ArrowRight } from "lucide-react";
+import WelcomeBanner from "@/components/layout/WellcomeBanner";
+import StatsCard from "@/components/cards/StatsCard";
+import SearchHeader from "@/components/exercises/SearchHeader";
+import FilterPanel from "@/components/exercises/FilterPanel";
+import type { Exercise, Challenge, DashboardStats } from "@/types";
 
-export default function DashboardPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  // Redirección defensiva si no hay sesión una vez terminó de cargar
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [loading, user, router]);
-
-  if (loading || !user) {
-    return <LoadingSpinner fullScreen />;
-  }
-
-  return (
-    <main className="p-4 md:p-8 space-y-8 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-            Bienvenido, <span className="text-indigo-600">{user.name}</span> 👋
-          </h1>
-          <p className="text-lg text-gray-600 mt-2">Tu progreso hoy</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <Link href="/ejercicios" className="w-full">
-            <Button className="w-full gap-2">
-              <BrainCircuit className="h-5 w-5" />
-              Ejercicios
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Link href="exercises" className="w-full">
-            <Button variant="outline" className="w-full gap-2">
-              <Trophy className="h-5 w-5" />
-              Mis retos
-            </Button>
-          </Link>
-          {/* ✅ Nuevo botón: Actividad diaria (pasos) */}
-          <Link href="/dashboard/actividad" className="w-full">
-            <Button variant="outline" className="w-full gap-2">
-              <Clock className="h-5 w-5" />
-              Actividad
-            </Button>
-          </Link>
-          <Link href="/dashboard/gym" className="w-full">
-            <Button variant="outline" className="w-full gap-2">
-              🏋️ Gimnasio
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Racha actual"
-          value={stats.streak}
-          icon={<Flame className="text-orange-500" />}
-          description="días consecutivos"
-          trend="up"
-        />
-        <StatCard
-          title="Ejercicios"
-          value={stats.exercisesCompleted}
-          icon={<BrainCircuit className="text-indigo-500" />}
-          description="completados"
-          trend="up"
-        />
-        <StatCard
-          title="Retos"
-          value={stats.challenges}
-          icon={<Trophy className="text-yellow-500" />}
-          description="activos"
-          trend="neutral"
-        />
-        <StatCard
-          title="Tiempo medio"
-          value="8.2"
-          icon={<Clock className="text-blue-500" />}
-          description="min/ejercicio"
-          isDecimal
-          trend="down"
-        />
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Progreso Semanal</CardTitle>
-              <CardDescription>
-                Tus resultados de los últimos 7 días
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-72">
-                <ProgressChart data={stats.weeklyProgress} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Actividad Reciente</CardTitle>
-              <CardDescription>
-                Tus últimos ejercicios completados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentActivities activities={recentActivities} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Objetivos y cita */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <DailyQuote />
-        </div>
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Tus Objetivos</CardTitle>
-              <CardDescription>Próximos desafíos</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <GoalItem
-                  title="Completa 5 ejercicios de memoria"
-                  progress={60}
-                  current={3}
-                  total={5}
-                />
-                <GoalItem
-                  title="Mantén la racha por 15 días"
-                  progress={80}
-                  current={12}
-                  total={15}
-                />
-                <GoalItem
-                  title="Mejora tu puntuación en patrones"
-                  progress={45}
-                  current={72}
-                  total={90}
-                  isScore
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-// Datos temporales
-const stats = {
-  streak: 12,
-  exercisesCompleted: 34,
-  challenges: 6,
-  weeklyProgress: [65, 59, 80, 81, 56, 55, 70],
+// ------ Tipado de datos del Dashboard ------
+type DashboardData = DashboardStats & {
+  recentExercises: Exercise[];
+  activeChallenges: Challenge[];
 };
 
-const recentActivities = [
-  { id: 1, name: "Memoria numérica", score: 85, date: "2023-06-15" },
-  { id: 2, name: "Patrones lógicos", score: 72, date: "2023-06-14" },
-  { id: 3, name: "Atención visual", score: 91, date: "2023-06-12" },
-];
+// ------ Filtros de ejercicios (reutiliza los de ExercisesPage) ------
+type Filters = {
+  searchQuery: string;
+  category: string;
+  difficulty: string;
+  sortBy: "recent" | "difficulty-asc" | "difficulty-desc";
+};
 
-// StatCard
-function StatCard({
-  title,
-  value,
-  icon,
-  description,
-  isDecimal = false,
-  trend,
-}: {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  description: string;
-  isDecimal?: boolean;
-  trend?: "up" | "down" | "neutral";
-}) {
-  const trendColors = {
-    up: "text-green-500",
-    down: "text-red-500",
-    neutral: "text-gray-500",
-  } as const;
+export default function DashboardPage() {
+  const { user } = useAuth();
+
+  // Dashboard core
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Explorar ejercicios (fusionado)
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [filters, setFilters] = useState<Filters>({
+    searchQuery: "",
+    category: "",
+    difficulty: "",
+    sortBy: "recent",
+  });
+
+  // ---------- Carga inicial ----------
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        setLoading(true);
+        const [progress, challenges, recent, allExercises, cats] =
+          await Promise.all([
+            fetchUserProgress(),
+            fetchActiveChallenges(),
+            fetchRecentExercises(3),
+            fetchExercises(),
+            fetchExerciseCategories(),
+          ]);
+
+        setData({
+          weeklyData: progress.weeklyData,
+          streak: progress.streak,
+          totalExercises: progress.totalExercises,
+          averageScore: progress.averageScore,
+          recentExercises: recent,
+          activeChallenges: challenges,
+        });
+
+        setExercises(allExercises);
+        setCategories(cats);
+      } catch (err) {
+        console.error(err);
+        setError("Error al cargar los datos del dashboard");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (user) loadDashboardData();
+  }, [user]);
+
+  // ---------- Filtrado (memo) ----------
+  const filteredExercises = useMemo(() => {
+    let result = [...exercises];
+
+    // búsqueda
+    if (filters.searchQuery) {
+      const q = filters.searchQuery.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          e.description.toLowerCase().includes(q)
+      );
+    }
+
+    // categoría
+    if (filters.category) {
+      result = result.filter((e) => e.category === filters.category);
+    }
+
+    // dificultad
+    if (filters.difficulty) {
+      result = result.filter((e) => e.difficulty === filters.difficulty);
+    }
+
+    // ordenamiento
+    const difficultyToNumber = (d: string) =>
+      d === "easy" ? 1 : d === "medium" ? 2 : d === "hard" ? 3 : 0;
+    switch (filters.sortBy) {
+      case "recent":
+        result.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        break;
+      case "difficulty-asc":
+        result.sort(
+          (a, b) =>
+            difficultyToNumber(a.difficulty) - difficultyToNumber(b.difficulty)
+        );
+        break;
+      case "difficulty-desc":
+        result.sort(
+          (a, b) =>
+            difficultyToNumber(b.difficulty) - difficultyToNumber(a.difficulty)
+        );
+        break;
+    }
+
+    return result;
+  }, [exercises, filters]);
+
+  const handleFilterChange = (partial: Partial<Filters>) =>
+    setFilters((prev) => ({ ...prev, ...partial }));
+
+  if (loading) return <LoadingSpinner fullScreen />;
+  if (error) return <div className="text-red-500 text-center p-8">{error}</div>;
+  if (!data) return <div>No hay datos disponibles</div>;
 
   return (
-    <Card>
-      <CardContent>
-        <div className="flex justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p className="text-3xl font-bold mt-2">
-              {isDecimal ? value : Math.round(Number(value))}
-            </p>
-            <div className="flex items-center mt-2">
-              {trend && (
-                <span
-                  className={`text-sm ${trendColors[trend]} flex items-center`}
-                >
-                  {trend === "up" ? "↑" : trend === "down" ? "↓" : "→"}
-                  {!isDecimal && trend !== "neutral" && " 5%"}
-                </span>
-              )}
-              <span className="text-xs text-gray-500 ml-2">{description}</span>
+    <div className="min-h-screen bg-gray-50">
+      {/* Banner de bienvenida */}
+      <WelcomeBanner name={user?.name || ""} streak={data.streak} />
+
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Estadísticas rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatsCard
+            title="Racha Actual"
+            value={data.streak}
+            icon="🔥"
+            description="días consecutivos"
+          />
+          <StatsCard
+            title="Ejercicios"
+            value={data.totalExercises}
+            icon="🧠"
+            description="completados"
+          />
+          <StatsCard
+            title="Puntuación Media"
+            value={data.averageScore}
+            icon="⭐"
+            description="de 100"
+            isPercentage
+          />
+          <StatsCard
+            title="Desafíos"
+            value={data.activeChallenges.length}
+            icon="🏆"
+            description="activos"
+          />
+        </div>
+
+        {/* Progreso semanal + recientes */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-2xl font-bold mb-4">Tu Progreso Semanal</h2>
+            <div className="h-80">
+              <ProgressChart data={data.weeklyData} />
             </div>
           </div>
-          <div className="p-3 rounded-lg bg-indigo-50 text-indigo-600">
-            {icon}
+
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-2xl font-bold mb-4">Ejercicios Recientes</h2>
+            <div className="space-y-4">
+              {data.recentExercises.length > 0 ? (
+                data.recentExercises.map((exercise) => (
+                  <ExerciseCard
+                    key={exercise._id}
+                    exercise={exercise}
+                    compact
+                  />
+                ))
+              ) : (
+                <p className="text-gray-500">
+                  Aún no has completado ejercicios
+                </p>
+              )}
+              <Link
+                href="/dashboard/retosmentales"
+                className="w-full mt-2 text-indigo-600 font-medium hover:text-indigo-800 transition-colors inline-block text-center"
+              >
+                Ver todos los ejercicios →
+              </Link>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
 
-// GoalItem
-function GoalItem({
-  title,
-  progress,
-  current,
-  total,
-  isScore = false,
-}: {
-  title: string;
-  progress: number;
-  current: number;
-  total: number;
-  isScore?: boolean;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="font-medium text-gray-800">{title}</p>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
-        <div
-          className="bg-indigo-600 h-2.5 rounded-full"
-          style={{ width: `${progress}%` }}
-        />
+        {/* Desafíos activos */}
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Tus Desafíos Activos</h2>
+            <button className="text-indigo-600 hover:text-indigo-800 transition-colors">
+              Ver todos →
+            </button>
+          </div>
+
+          {data.activeChallenges.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.activeChallenges.map((challenge) => (
+                <ChallengeItem key={challenge._id} challenge={challenge} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">
+                No tienes desafíos activos actualmente
+              </p>
+              <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                Explorar desafíos
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* --- Explorador de ejercicios (fusionado) --- */}
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Explorar Ejercicios</h2>
+          </div>
+
+          {/* Header de búsqueda */}
+          <div className="mb-6">
+            <SearchHeader
+              searchQuery={filters.searchQuery}
+              onSearchChange={(value) =>
+                handleFilterChange({ searchQuery: value })
+              }
+            />
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Panel de filtros */}
+            <div className="md:w-1/4">
+              <FilterPanel
+                categories={categories}
+                selectedCategory={filters.category}
+                selectedDifficulty={filters.difficulty}
+                sortBy={filters.sortBy}
+                onCategoryChange={(category) =>
+                  handleFilterChange({ category })
+                }
+                onDifficultyChange={(difficulty) =>
+                  handleFilterChange({ difficulty })
+                }
+                onSortChange={(sortBy) =>
+                  handleFilterChange({ sortBy: sortBy as Filters["sortBy"] })
+                }
+              />
+            </div>
+
+            {/* Grid de ejercicios filtrados */}
+            <div className="md:w-3/4">
+              {filteredExercises.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredExercises.map((exercise) => (
+                    <ExerciseCard key={exercise._id} exercise={exercise} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <h3 className="text-lg font-semibold mb-2">
+                    No se encontraron ejercicios
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    Prueba a ajustar los filtros o limpiar la búsqueda
+                  </p>
+                  <button
+                    onClick={() =>
+                      setFilters({
+                        searchQuery: "",
+                        category: "",
+                        difficulty: "",
+                        sortBy: "recent",
+                      })
+                    }
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    Restablecer filtros
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recomendación del día */}
+        <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
+          <h2 className="text-xl font-bold mb-2">Recomendación del Día</h2>
+          <p className="text-gray-700 mb-4">
+            Basado en tu actividad reciente, te recomendamos trabajar en
+            ejercicios de memoria espacial.
+          </p>
+          <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+            Empezar ejercicio recomendado
+          </button>
+        </div>
       </div>
-      <p className="text-sm text-gray-600">
-        {isScore ? `${current} puntos` : `${current} de ${total}`}{" "}
-        <span className="text-indigo-600 ml-2">{progress}%</span>
-      </p>
     </div>
   );
 }

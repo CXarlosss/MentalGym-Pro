@@ -172,3 +172,55 @@ export type CardioGoals = {
 };
 
 export type Badge = { code: string; title: string; unlockedAt: string };
+
+// --- Nutrición ---
+export type MealType = 'desayuno' | 'comida' | 'cena' | 'snack';
+
+export type FoodItem = {
+  _id: string;
+  name: string;
+  kcal: number;     // por 100g o por unidad (ver unit)
+  protein: number;  // g
+  carbs: number;    // g
+  fat: number;      // g
+  unit?: '100g' | 'unidad';
+  tags?: string[];
+};
+
+export type MealEntry = {
+  _id: string;
+  date: string;       // YYYY-MM-DD
+  type: MealType;
+  foodName: string;
+  amount: number;     // gramos o unidades
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  createdAt: string;
+};
+
+export type DailyNutrition = {
+  date: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  waterMl: number;
+  meals: MealEntry[];
+};
+
+export type NutritionTargets = {
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  waterMl: number;      // objetivo diario de agua
+};
+
+export type WeeklyNutritionSummary = {
+  days: Array<{ date: string; kcal: number; protein: number; carbs: number; fat: number; waterMl: number }>;
+  avg: { kcal: number; protein: number; carbs: number; fat: number; waterMl: number };
+};
+
+export type FoodFavorite = string; // nombre del alimento

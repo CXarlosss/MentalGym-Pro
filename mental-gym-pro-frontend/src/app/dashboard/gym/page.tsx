@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  seedDefaultRoutinesOnce, getRoutines, saveRoutine, duplicateRoutine,
-  getFavoriteExercises, toggleFavoriteExercise,
+  seedDefaultRoutinesOnce, getRoutines,  duplicateRoutine,
+  getFavoriteExercises,
   addGymSetToday, getGymWeeklySummary, getGroupVolumeThisWeek,
   epley1RM, brzycki1RM, targetFromPercent1RM
 } from '@/lib/api'
-import type { RoutineTemplate, LiftTag } from '@/types'
+import type {LiftTag } from '@/types'
 
 // ── Timer simple con notificación
 function RestTimer({ seconds=90 }: { seconds?: number }) {
@@ -40,7 +40,7 @@ function RestTimer({ seconds=90 }: { seconds?: number }) {
 
 export default function GymPage() {
   const [routines, setRoutines] = useState(getRoutines())
-  const [fav, setFav] = useState(getFavoriteExercises())
+  const [fav] = useState(getFavoriteExercises())
   const [percent, setPercent] = useState(80)
   const [oneRM, setOneRM] = useState(100)
 
@@ -65,10 +65,7 @@ export default function GymPage() {
     setGroups(gv)
   }
 
-  function toggleFav(name: string) {
-    const f = toggleFavoriteExercise(name)
-    setFav(f)
-  }
+
 
   async function quickAdd(exercise: string, tags: LiftTag[] = []) {
     await addGymSetToday({ exercise, weight, reps, rpe, rir, marker: marker||undefined, tags })

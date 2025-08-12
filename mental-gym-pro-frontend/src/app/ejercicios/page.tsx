@@ -40,7 +40,7 @@ export default function DashboardPage() {
         ])
 
         setData({
-  weeklyProgress: progress.weeklyData,
+  weeklyData: progress.weeklyData,
   streak: progress.streak,
   totalExercises: progress.totalExercises, // ✅ sin error
   averageScore: progress.averageScore,
@@ -104,7 +104,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-2xl font-bold mb-4">Tu Progreso Semanal</h2>
             <div className="h-80">
-              <ProgressChart data={data.weeklyProgress} />
+              <ProgressChart data={data.weeklyData} />
             </div>
           </div>
           
