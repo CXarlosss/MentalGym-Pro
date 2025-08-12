@@ -697,3 +697,24 @@ export function getWeekNutrition(): WeeklyNutritionSummary {
     }
   };
 }
+
+
+// src/lib/api.ts
+export async function logoutUser(): Promise<void> {
+  try {
+    const token = localStorage.getItem('token')
+    // Si tienes endpoint, inténtalo, pero no lances si falla.
+    if (token) {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {})
+    }
+  } finally {
+    // Pase lo que pase, limpiamos el cliente
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
+}
+
+

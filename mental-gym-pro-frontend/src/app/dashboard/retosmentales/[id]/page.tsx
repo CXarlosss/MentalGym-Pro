@@ -1,134 +1,146 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { fetchExercises, fetchExerciseCategories } from '@/lib/api'
-import ExerciseCard from '@/components/cards/ExerciseCard'
-import FilterPanel from '@/components/exercises/FilterPanel'
-import SearchHeader from '@/components/exercises/SearchHeader'
-import LoadingSkeleton from '@/components/exercises/LoadingSkeleton'
-import EmptyState from '@/components/EmptyState'
-import type { Exercise } from '@/types'
+import { fetchExerciseById, startExerciseSession, completeExercise } from '@/lib/api'
+import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
+import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
+import ExerciseSession from '@/components/exercises/detail/ExerciseSession'
+import ExerciseResults from '@/components/exercises/detail/ExerciseResults'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { toast } from 'react-hot-toast'
+import type { Exercise, ExerciseResult } from '@/types'
 
-// /dashboard/retosmentales -> Listado con búsqueda + filtros
-export default function RetosMentalesPage() {
+type Stage = 'instructions' | 'session' | 'results'
+
+// util de reintento
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 300): Promise<T> {
+  try {
+    return await fn()
+  } catch (e) {
+    if (retries <= 0) throw e
+    await new Promise(r => setTimeout(r, delayMs))
+    return withRetry(fn, retries - 1, delayMs * 2)
+  }
+}
+
+export default function RetoMentalDetailPage() {
+  const params = useParams()
+  const id = params?.id as string
+  const router = useRouter()
   const { user } = useAuth()
 
-  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [exercise, setExercise] = useState<Exercise | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [categories, setCategories] = useState<string[]>([])
-  const [filters, setFilters] = useState({
-    searchQuery: '',
-    category: '',
-    difficulty: '',
-    sortBy: 'recent' as 'recent' | 'difficulty-asc' | 'difficulty-desc',
-  })
+  const [stage, setStage] = useState<Stage>('instructions')
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [results, setResults] = useState<ExerciseResult | null>(null)
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await withRetry(() => fetchExerciseById(id), 3, 300)
+      setExercise(data)
+    } catch (e) {
+      console.error(e)
+      setError('No se pudo cargar el ejercicio. Intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true)
-        const [exercisesData, categoriesData] = await Promise.all([
-          fetchExercises(),
-          fetchExerciseCategories(),
-        ])
-        setExercises(exercisesData)
-        setCategories(categoriesData)
-      } catch (err) {
-        console.error(err)
-        setError('Error al cargar los ejercicios')
-      } finally {
-        setLoading(false)
-      }
+    if (user && id) load()
+  }, [user, id])
+
+  const handleStart = async () => {
+    try {
+      const session = await startExerciseSession(id)
+      setSessionId(session._id)
+      setStage('session')
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al iniciar el ejercicio')
     }
-    if (user) load()
-  }, [user])
+  }
 
-  const filtered = useMemo(() => {
-    let result = [...exercises]
-
-    if (filters.searchQuery) {
-      const q = filters.searchQuery.toLowerCase()
-      result = result.filter(
-        (e) => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q),
-      )
+  const handleComplete = async (score: number, timeSpent: number) => {
+    if (!sessionId) return
+    try {
+      const res = await completeExercise(sessionId, { score, timeSpent, metadata: {} })
+      setResults(res)
+      setStage('results')
+      toast.success('¡Ejercicio completado!')
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al guardar los resultados')
     }
+  }
 
-    if (filters.category) {
-      result = result.filter((e) => e.category === filters.category)
-    }
+  const handleRetry = () => {
+    setStage('instructions')
+    setResults(null)
+  }
 
-    if (filters.difficulty) {
-      result = result.filter((e) => e.difficulty === filters.difficulty)
-    }
+  if (loading) return <LoadingSpinner fullScreen />
 
-    const difficultyToNumber = (d: string) => (d === 'easy' ? 1 : d === 'medium' ? 2 : d === 'hard' ? 3 : 0)
-    switch (filters.sortBy) {
-      case 'recent':
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        break
-      case 'difficulty-asc':
-        result.sort((a, b) => difficultyToNumber(a.difficulty) - difficultyToNumber(b.difficulty))
-        break
-      case 'difficulty-desc':
-        result.sort((a, b) => difficultyToNumber(b.difficulty) - difficultyToNumber(a.difficulty))
-        break
-    }
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-6 rounded-xl shadow text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={load}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
 
-    return result
-  }, [exercises, filters])
-
-  const handleFilterChange = (partial: Partial<typeof filters>) => setFilters((prev) => ({ ...prev, ...partial }))
-
-  if (loading) return <LoadingSkeleton />
-  if (error) return <div className="text-red-500 text-center p-8">{error}</div>
+  if (!exercise) return <div>Ejercicio no encontrado</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Retos Mentales</h1>
-          <p className="text-gray-600">Explora y filtra ejercicios por categoría y dificultad.</p>
-        </div>
-
-        {/* Buscador */}
-        <SearchHeader
-          searchQuery={filters.searchQuery}
-          onSearchChange={(value) => handleFilterChange({ searchQuery: value })}
+        <ExerciseHeader
+          title={exercise.title}
+          difficulty={exercise.difficulty}
+          category={exercise.category}
+          onBack={() => router.push('/dashboard/retosmentales')}
         />
 
-        <div className="flex flex-col md:flex-row gap-8 mt-6">
-          {/* Filtros */}
-          <div className="md:w-1/4">
-            <FilterPanel
-              categories={categories}
-              selectedCategory={filters.category}
-              selectedDifficulty={filters.difficulty}
-              sortBy={filters.sortBy}
-              onCategoryChange={(category) => handleFilterChange({ category })}
-              onDifficultyChange={(difficulty) => handleFilterChange({ difficulty })}
-              onSortChange={(sortBy) => handleFilterChange({ sortBy: sortBy as typeof filters['sortBy'] })}
+        <div className="max-w-3xl mx-auto mt-8">
+          {stage === 'instructions' && (
+            <ExerciseInstructions
+              description={exercise.description}
+              duration={exercise.duration || 5}
+              instructions={exercise.instructions || []}
+              onStart={handleStart}
             />
-          </div>
+          )}
 
-          {/* Grid */}
-          <div className="md:w-3/4">
-            {filtered.length ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map((ex) => (
-                  <ExerciseCard key={ex._id} exercise={ex} />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                title="No se encontraron ejercicios"
-                description="Intenta ajustar los filtros o limpiar la búsqueda"
-                actionText="Restablecer filtros"
-                onAction={() => setFilters({ searchQuery: '', category: '', difficulty: '', sortBy: 'recent' })}
-              />
-            )}
-          </div>
+          {stage === 'session' && (
+            <ExerciseSession
+              exercise={exercise}
+              onComplete={handleComplete}
+              onCancel={() => setStage('instructions')}
+            />
+          )}
+
+          {stage === 'results' && results && (
+            <ExerciseResults
+              results={results}
+              exercise={exercise}
+              onRetry={handleRetry}
+              onBack={() => router.push('/dashboard/retosmentales')}
+            />
+          )}
         </div>
       </div>
     </div>

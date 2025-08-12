@@ -6,7 +6,7 @@ import { Exercise } from '@/types'
 
 type ExerciseSessionProps = {
   exercise: Exercise
-  onComplete: (score: number, timeSpent: number) => void
+  onComplete: (scoreNormalized: number, timeSpentSec: number) => void
   onCancel: () => void
 }
 
@@ -14,41 +14,48 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
   const [progress, setProgress] = useState(0)
   const [score, setScore] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
-  // ✅ CORRECCIÓN: Cambiamos el tipo de useRef a number | null
-const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Guarda el número correcto aunque lo ocultemos en UI
+  const answerRef = useRef<string>('')
+
+  // Timer para ocultar el número
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Para calcular el tiempo empleado
   const startTimeRef = useRef<Date>(new Date())
-  
+
   const expiryTimestamp = new Date()
   expiryTimestamp.setSeconds(expiryTimestamp.getSeconds() + (exercise.duration || 5) * 60)
-  
-  const { seconds, minutes, pause } = useTimer({ 
+
+  const { seconds, minutes, pause } = useTimer({
     expiryTimestamp,
-    onExpire: () => handleComplete()
+    onExpire: () => handleComplete(),
   })
 
-  // Ejemplo de ejercicio de memoria básico
-  const [currentChallenge, setCurrentChallenge] = useState<string>('')
+  // Estado del mini-juego
+  const [currentChallenge, setCurrentChallenge] = useState<string>('') // solo para mostrar
   const [userInput, setUserInput] = useState('')
   const [round, setRound] = useState(1)
 
   useEffect(() => {
-    generateChallenge()
-    // La función de limpieza ahora es compatible con el tipo number | null
+    // Al montar: arrancamos primera ronda
+    startTimeRef.current = new Date()
+    generateChallenge(1)
     return () => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current)
-      }
+      if (timerRef.current !== null) clearTimeout(timerRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const generateChallenge = () => {
-    // Genera un número aleatorio de 3 a 5 + round dígitos
-    const length = 3 + Math.min(round - 1, 2)
+  // Genera un reto para la ronda indicada y lo muestra 2s
+  const generateChallenge = (roundNumber: number) => {
+    const length = 3 + Math.min(roundNumber - 1, 2) // 3,4,5,5,5
     const challenge = Array.from({ length }, () => Math.floor(Math.random() * 10)).join('')
+    answerRef.current = challenge
     setCurrentChallenge(challenge)
-    
-    // Muestra el número por 2 segundos
-    // ✅ CORRECCIÓN: setTimeout devuelve un number que es el tipo correcto para timerRef
+
+    // Ocultar a los 2s (pero mantenemos answerRef para validar)
+    if (timerRef.current !== null) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       setCurrentChallenge('')
     }, 2000)
@@ -56,16 +63,20 @@ const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (userInput === currentChallenge) {
-      const roundScore = currentChallenge.length * 10
-      setScore(prev => prev + roundScore)
-      setProgress(prev => prev + (100 / 5)) // 5 rondas para completar
-      
+
+    if (userInput === answerRef.current) {
+      const roundScore = answerRef.current.length * 10
+      setScore((prev) => prev + roundScore)
+      setProgress((prev) => prev + 100 / 5) // 5 rondas
+
       if (round < 5) {
-        setRound(prev => prev + 1)
-        setUserInput('')
-        generateChallenge()
+        // Calcula siguiente ronda y genera con ese valor (evita stale state)
+        setRound((prev) => {
+          const next = prev + 1
+          setUserInput('')
+          generateChallenge(next)
+          return next
+        })
       } else {
         handleComplete()
       }
@@ -76,10 +87,17 @@ const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   }
 
   const handleComplete = () => {
+    if (isCompleted) return
     setIsCompleted(true)
     pause()
-    const timeSpent = Math.floor((new Date().getTime() - startTimeRef.current.getTime()) / 1000)
-    onComplete(score, timeSpent)
+
+    const timeSpent = Math.floor((Date.now() - startTimeRef.current.getTime()) / 1000)
+
+    // Normaliza a 0–100 (máx 220 puntos con 5 rondas 3,4,5,5,5)
+    const maxScore = Array.from({ length: 5 }, (_, i) => (3 + Math.min(i, 2)) * 10).reduce((a, b) => a + b, 0)
+    const normalized = Math.min(100, Math.round((score / maxScore) * 100))
+
+    onComplete(normalized, timeSpent)
   }
 
   return (
@@ -90,19 +108,15 @@ const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
           {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
         </div>
       </div>
-      
+
       <ProgressBar value={progress} />
-      
+
       <div className="text-center py-8">
         {currentChallenge ? (
-          <div className="text-5xl font-bold tracking-widest mb-8">
-            {currentChallenge}
-          </div>
+          <div className="text-5xl font-bold tracking-widest mb-8">{currentChallenge}</div>
         ) : (
           <form onSubmit={handleSubmit} className="max-w-md mx-auto">
-            <label className="block text-gray-700 mb-2">
-              Ingresa el número que viste:
-            </label>
+            <label className="block text-gray-700 mb-2">Ingresa el número que viste:</label>
             <input
               type="text"
               value={userInput}
@@ -121,12 +135,9 @@ const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
           </form>
         )}
       </div>
-      
+
       <div className="flex justify-between items-center mt-6">
-        <button
-          onClick={onCancel}
-          className="text-gray-600 hover:text-gray-800 transition-colors"
-        >
+        <button onClick={onCancel} className="text-gray-600 hover:text-gray-800 transition-colors">
           Cancelar
         </button>
         <div className="text-lg font-medium">

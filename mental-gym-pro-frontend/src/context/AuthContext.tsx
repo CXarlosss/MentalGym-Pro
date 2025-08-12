@@ -30,29 +30,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar sesión al cargar
   useEffect(() => {
-  async function loadUser() {
-    try {
-      const token = localStorage.getItem('token')
-      const user = localStorage.getItem('user')                                                             
+    async function loadUser() {
+      try {
+        const token = localStorage.getItem('token')
+        const cached = localStorage.getItem('user')
 
-      if (token && user) {
-        setUser(JSON.parse(user))
+        if (!token) return
+        if (cached) {
+          setUser(JSON.parse(cached))
+          return
+        }
+
+        // Fallback: si hay token pero no user cacheado, consultar al backend
+        try {
+          const u = await getCurrentUser(token)
+          localStorage.setItem('user', JSON.stringify(u))
+          setUser(u)
+        } catch (e) {
+          console.warn('getCurrentUser falló, limpiando sesión', e)
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+        }
+      } catch (error) {
+        console.error('Error loading user:', error)
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Error loading user:', error)
-      localStorage.removeItem('token')
-    } finally {
-      setLoading(false) // ✅ esto debe ir dentro del bloque que sí carga user
     }
-  }
-  loadUser()
-}, [])
+    loadUser()
+  }, [])
 
   const register = async (name: string, email: string, password: string) => {
     try {
       setLoading(true)
       const { user, token } = await registerUser({ name, email, password })
       localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user)) // ✅ cachea también el user
       setUser(user)
       toast.success('¡Registro exitoso!')
       router.push('/dashboard')
@@ -65,74 +80,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-const login = async (email: string, password: string) => {
-  try {
-    setLoading(true);
-    console.log("[AuthContext] Intentando login con:", email);
-
-    const { user, token } = await loginUser({ email, password });
-    console.log("[AuthContext] Respuesta de API:", { user, token });
-
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-    setUser(user);
-
-    toast.success("¡Bienvenido de nuevo!");
-
-    console.log("[AuthContext] Login correcto. Redirigiendo a /dashboard...");
-    // 👇 importante: replace + siguiente tick
-   setTimeout(() => {
-  console.log("[AuthContext] Antes de replace, href:", window.location.href);
-  router.replace("/dashboard");
-  setTimeout(() => {
-    console.log("[AuthContext] Después de replace, href:", window.location.href);
-  }, 200);
-}, 0);
-
-  } catch (error) {
-    console.error("[AuthContext] Error en login:", error);
-    toast.error(error instanceof Error ? error.message : "Error en el login");
-    throw error;
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-  const logout = async () => {
+  const login = async (email: string, password: string) => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      if (token) {
-        await logoutUser(token)
-      }
-      localStorage.removeItem('token')
-      setUser(null)
-      toast.success('Sesión cerrada correctamente')
-      router.push('/login')
+      const { user, token } = await loginUser({ email, password })
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
+      setUser(user)
+      toast.success('¡Bienvenido de nuevo!')
+      router.replace('/dashboard')
     } catch (error) {
-      console.error('Logout error:', error)
-      toast.error('Error al cerrar sesión')
+      console.error('[AuthContext] Error en login:', error)
+      toast.error(error instanceof Error ? error.message : 'Error en el login')
+      throw error
     } finally {
       setLoading(false)
     }
   }
 
+  const logout = async () => {
+    setLoading(true)
+    const token = localStorage.getItem('token')
+    try {
+      if (token) {
+        // No dejes que una caída del backend rompa el logout local
+        await logoutUser(token).catch((e: unknown) => {
+          console.warn('logoutUser falló (ignorado):', e)
+        })
+      }
+    } finally {
+      // Pase lo que pase, limpia y redirige
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      setUser(null)
+      toast.success('Sesión cerrada correctamente')
+      router.replace('/login')
+      setLoading(false)
+    }
+  }
+
   const updateUser = (userData: Partial<User>) => {
-    setUser(prev => (prev ? { ...prev, ...userData } : null))
+    setUser(prev => {
+      const next = prev ? { ...prev, ...userData } : null
+      if (next) localStorage.setItem('user', JSON.stringify(next))
+      return next
+    })
   }
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        register,
-        login,
-        logout,
-        updateUser
-      }}
+      value={{ user, loading, register, login, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>
