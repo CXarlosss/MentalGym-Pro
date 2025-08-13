@@ -11,6 +11,7 @@ export default function StatsCard({
   icon: string
   description: string
   isPercentage?: boolean
+  color?: string
 }) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm">

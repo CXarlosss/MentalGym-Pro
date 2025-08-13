@@ -128,7 +128,8 @@ export default function RetosMentalesPage() {
   if (error) return <div className="text-red-500 text-center p-8">{error}</div>
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-7xl mx-auto p-4 space-y-6  bg-gradient-to-br from-indigo-50 to-gray-50 min-h-screen">
+      {/* Header */}
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">Retos Mentales</h1>

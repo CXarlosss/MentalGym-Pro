@@ -8,6 +8,7 @@ export default function ExerciseCard({
 }: {
   exercise: Exercise;
   compact?: boolean;
+  colorScheme?: string; // opcional para estilos personalizados
 }) {
   const difficultyColors = {
     easy: "bg-green-100 text-green-800",
