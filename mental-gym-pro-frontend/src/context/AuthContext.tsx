@@ -1,16 +1,18 @@
-// src/context/AuthContext.tsx
 'use client'
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { registerUser, loginUser, logoutUser, getCurrentUser } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
+import { updateUserProfile } from '@/lib/api'
+import type { User } from '@/types' // ✅ Importa el tipo User del archivo de tipos global
 
-type User = {
-  id: string
-  name: string
-  email: string
-  avatar?: string
-}
+// ✅ Elimina esta definición local de 'User' para evitar el conflicto
+// type User = {
+//   id: string
+//   name: string
+//   email: string
+//   avatar?: string
+// }
 
 type AuthContextType = {
   user: User | null
@@ -18,7 +20,7 @@ type AuthContextType = {
   register: (name: string, email: string, password: string) => Promise<void>
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  updateUser: (userData: Partial<User>) => void
+  updateUser: (userData: Partial<User>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
@@ -28,20 +30,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Verificar sesión al cargar
   useEffect(() => {
     async function loadUser() {
       try {
         const token = localStorage.getItem('token')
         const cached = localStorage.getItem('user')
+        setLoading(true)
 
         if (!token) return
         if (cached) {
+          // ✅ Ahora el tipo de `cached` es compatible con el tipo `User` del estado
           setUser(JSON.parse(cached))
           return
         }
 
-        // Fallback: si hay token pero no user cacheado, consultar al backend
         try {
           const u = await getCurrentUser(token)
           localStorage.setItem('user', JSON.stringify(u))
@@ -65,10 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     try {
       setLoading(true)
-      const { user, token } = await registerUser({ name, email, password })
+      const { user: newUser, token } = await registerUser({ name, email, password })
+
+      // ✅ `newUser` debería ser un objeto con _id, createdAt y updatedAt
+      setUser(newUser)
       localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user)) // ✅ cachea también el user
-      setUser(user)
+      localStorage.setItem('user', JSON.stringify(newUser))
+      
       toast.success('¡Registro exitoso!')
       router.push('/dashboard')
     } catch (error) {
@@ -83,10 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true)
-      const { user, token } = await loginUser({ email, password })
+      const { user: loggedInUser, token } = await loginUser({ email, password })
+
+      // ✅ `loggedInUser` debería ser un objeto con _id, createdAt y updatedAt
+      setUser(loggedInUser)
       localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-      setUser(user)
+      localStorage.setItem('user', JSON.stringify(loggedInUser))
+
       toast.success('¡Bienvenido de nuevo!')
       router.replace('/dashboard')
     } catch (error) {
@@ -103,13 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token')
     try {
       if (token) {
-        // No dejes que una caída del backend rompa el logout local
         await logoutUser(token).catch((e: unknown) => {
           console.warn('logoutUser falló (ignorado):', e)
         })
       }
     } finally {
-      // Pase lo que pase, limpia y redirige
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       setUser(null)
@@ -119,12 +125,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateUser = (userData: Partial<User>) => {
-    setUser(prev => {
-      const next = prev ? { ...prev, ...userData } : null
-      if (next) localStorage.setItem('user', JSON.stringify(next))
-      return next
-    })
+  const updateUser = async (userData: Partial<User>) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) throw new Error('No hay sesión activa para actualizar')
+
+      setLoading(true)
+      const updatedUser = await updateUserProfile(userData)
+      
+      // ✅ El objeto `updatedUser` ahora es del tipo correcto (`User` con `_id`)
+      setUser(updatedUser)
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+
+      toast.success('Perfil actualizado correctamente')
+    } catch (error) {
+      console.error('Error updating user:', error)
+      toast.error('No se pudo actualizar el perfil')
+      throw error
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

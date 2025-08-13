@@ -718,3 +718,27 @@ export async function logoutUser(): Promise<void> {
 }
 
 
+// --- Perfil (mock/localStorage) ---
+
+export async function updateUserProfile(input: Partial<Pick<User, 'name'|'avatar'>>) {
+  await new Promise(r => setTimeout(r, 200))
+  const raw = localStorage.getItem('user')
+  if (!raw) throw new Error('No hay sesión')
+  const current = JSON.parse(raw) as User
+  const updated: User = {
+    ...current,
+    ...input,
+    updatedAt: new Date().toISOString(),
+  }
+  localStorage.setItem('user', JSON.stringify(updated))
+  return updated
+}
+
+// mock de cambio de contraseña (solo valida y “guarda” la hash en LS)
+export async function changePasswordMock(currentPass: string, newPass: string) {
+  await new Promise(r => setTimeout(r, 250))
+  if (newPass.length < 6) throw new Error('La nueva contraseña debe tener al menos 6 caracteres')
+  // en real: POST al backend. Aquí solo marcamos un flag.
+  localStorage.setItem('lastPasswordChangeAt', new Date().toISOString())
+  return true
+}
