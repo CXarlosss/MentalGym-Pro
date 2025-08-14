@@ -2,26 +2,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTimer } from 'react-timer-hook'
 import ProgressBar from '@/components/progress/ProgressBar'
-import { Exercise } from '@/types'
+import type { Exercise } from '@/types'
 
-type ExerciseSessionProps = {
+type Props = {
   exercise: Exercise
   onComplete: (scoreNormalized: number, timeSpentSec: number) => void
   onCancel: () => void
 }
 
-export default function ExerciseSession({ exercise, onComplete, onCancel }: ExerciseSessionProps) {
+/* ---------- MOTOR: memoria de números (lo que ya tenías) ---------- */
+function MemoryNumbersSession({ exercise, onComplete, onCancel }: Props) {
   const [progress, setProgress] = useState(0)
   const [score, setScore] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
 
-  // Guarda el número correcto aunque lo ocultemos en UI
   const answerRef = useRef<string>('')
-
-  // Timer para ocultar el número
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Para calcular el tiempo empleado
   const startTimeRef = useRef<Date>(new Date())
 
   const expiryTimestamp = new Date()
@@ -32,53 +28,46 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
     onExpire: () => handleComplete(),
   })
 
-  // Estado del mini-juego
-  const [currentChallenge, setCurrentChallenge] = useState<string>('') // solo para mostrar
+  const [currentChallenge, setCurrentChallenge] = useState<string>('') 
   const [userInput, setUserInput] = useState('')
   const [round, setRound] = useState(1)
 
   useEffect(() => {
-    // Al montar: arrancamos primera ronda
     startTimeRef.current = new Date()
     generateChallenge(1)
-    return () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current)
-    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Genera un reto para la ronda indicada y lo muestra 2s
   const generateChallenge = (roundNumber: number) => {
     const length = 3 + Math.min(roundNumber - 1, 2) // 3,4,5,5,5
     const challenge = Array.from({ length }, () => Math.floor(Math.random() * 10)).join('')
     answerRef.current = challenge
     setCurrentChallenge(challenge)
-
-    // Ocultar a los 2s (pero mantenemos answerRef para validar)
-    if (timerRef.current !== null) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      setCurrentChallenge('')
-    }, 2000)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setCurrentChallenge(''), 2000)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
     if (userInput === answerRef.current) {
       const roundScore = answerRef.current.length * 10
-      setScore((prev) => prev + roundScore)
-      setProgress((prev) => prev + 100 / 5) // 5 rondas
 
       if (round < 5) {
-        // Calcula siguiente ronda y genera con ese valor (evita stale state)
-        setRound((prev) => {
+        setScore(prev => prev + roundScore)
+        setProgress(prev => prev + 100 / 5)
+        setRound(prev => {
           const next = prev + 1
           setUserInput('')
           generateChallenge(next)
           return next
         })
       } else {
-        handleComplete()
+        // ⚠️ asegura que cuente la última ronda antes de completar
+        const finalScore = score + roundScore
+        const maxScore = [3,4,5,5,5].reduce((a,b)=>a + b*10, 0)
+        const normalized = Math.min(100, Math.round((finalScore / maxScore) * 100))
+        finish(normalized)
       }
     } else {
       alert('¡Incorrecto! Intenta recordar mejor.')
@@ -87,16 +76,17 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
   }
 
   const handleComplete = () => {
+    // Completa usando el score actual (por expiración)
+    const maxScore = [3,4,5,5,5].reduce((a,b)=>a + b*10, 0)
+    const normalized = Math.min(100, Math.round((score / maxScore) * 100))
+    finish(normalized)
+  }
+
+  const finish = (normalized: number) => {
     if (isCompleted) return
     setIsCompleted(true)
     pause()
-
     const timeSpent = Math.floor((Date.now() - startTimeRef.current.getTime()) / 1000)
-
-    // Normaliza a 0–100 (máx 220 puntos con 5 rondas 3,4,5,5,5)
-    const maxScore = Array.from({ length: 5 }, (_, i) => (3 + Math.min(i, 2)) * 10).reduce((a, b) => a + b, 0)
-    const normalized = Math.min(100, Math.round((score / maxScore) * 100))
-
     onComplete(normalized, timeSpent)
   }
 
@@ -146,4 +136,42 @@ export default function ExerciseSession({ exercise, onComplete, onCancel }: Exer
       </div>
     </div>
   )
+}
+
+/* ---------- Stubs rápidos para otros motores ---------- */
+function ReactionSpeedSession({ onComplete, onCancel }: Props) {
+  return (
+    <div className="p-6 bg-white rounded-xl border">
+      <p className="mb-4">Demo “Velocidad de reacción”.</p>
+      <div className="flex gap-2">
+        <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={() => onComplete(90, 20)}>Terminar (demo)</button>
+        <button className="px-4 py-2 rounded border" onClick={onCancel}>Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
+function MentalMathSession({ onComplete, onCancel }: Props) {
+  return (
+    <div className="p-6 bg-white rounded-xl border">
+      <p className="mb-4">Demo “Cálculo rápido”.</p>
+      <div className="flex gap-2">
+        <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={() => onComplete(75, 40)}>Terminar (demo)</button>
+        <button className="px-4 py-2 rounded border" onClick={onCancel}>Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Dispatcher por engine ---------- */
+export default function ExerciseSession(props: Props) {
+  const eng = props.exercise.engine
+  switch (eng) {
+    case 'reaction-speed':   return <ReactionSpeedSession {...props} />
+    case 'mental-math':      return <MentalMathSession {...props} />
+    // agrega aquí ‘logic-seq’, ‘attention-selective’, ‘cognitive-flex’ cuando los tengas
+    case 'memory-pairs':
+    default:
+      return <MemoryNumbersSession {...props} />
+  }
 }

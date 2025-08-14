@@ -14,7 +14,12 @@ export default function ExerciseResults({
   onBack: () => void
 }) {
   const percentage = Math.round((results.score / 100) * 100)
-  const timeInMinutes = Math.round(results.timeSpent / 60)
+const formatDuration = (totalSec: number) => {
+  if (totalSec < 60) return `${totalSec}s`
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} min`
+}
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -38,7 +43,7 @@ export default function ExerciseResults({
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-gray-50 p-4 rounded-lg text-center">
           <p className="text-gray-500 text-sm">Tiempo</p>
-          <p className="font-bold">{timeInMinutes} min</p>
+<p className="font-bold">{formatDuration(results.timeSpent)}</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg text-center">
           <p className="text-gray-500 text-sm">Dificultad</p>

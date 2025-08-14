@@ -34,6 +34,7 @@ import type {
 // ==============================================
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 const ACTIVITY_KEY = 'mgp_activity_log' // localStorage key para actividad
+const API = API_URL; // 👈 asegúrate de que existe *una sola vez* y bien arriba
 
 // Fecha local YYYY-MM-DD (evita líos de zona horaria)
 function toLocalYMD(d: Date) {
@@ -47,86 +48,232 @@ function todayKey(d = new Date()) {
 }
 
 // ==============================================
-//                 MOCKS (DEMO)
+//          APIS DE EJERCICIOS (BACKEND + MOCK)
 // ==============================================
-const mockExercises: Exercise[] = [
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === '1';
+
+// ——— Mock de ejercicios ———
+const MOCK_EXERCISES: Exercise[] = [
   {
-    _id: '1',
-    title: 'Memoria de Números',
-    description: 'Recuerda y repite secuencias numéricas de longitud creciente',
+    _id: 'ex_mem_pairs',
+    title: 'Memoria de pares',
+    description: 'Encuentra todas las parejas de cartas iguales lo más rápido posible.',
     category: 'memoria',
     difficulty: 'easy',
     duration: 5,
     instructions: [
-      'Memoriza el número que aparecerá en pantalla.',
-      'Espera a que desaparezca.',
-      'Ingresa el número exacto que viste.',
-      'Cada ronda aumenta la dificultad.',
-      'Completa 5 rondas para finalizar.',
+      'Haz clic en dos cartas para voltearlas.',
+      'Si son iguales, quedarán descubiertas.',
+      'Encuentra todas las parejas en el menor tiempo posible.'
     ],
-    createdAt: '2023-05-15T10:00:00Z',
-    updatedAt: '2023-05-16T12:00:00Z',
+    createdAt: '2025-01-01T10:00:00Z',
+    updatedAt: '2025-01-01T10:00:00Z',
+    engine: 'memory-pairs'
   },
   {
-    _id: '2',
-    title: 'Búsqueda Rápida de Patrones',
-    description: 'Encuentra el patrón que no encaja en una serie de imágenes.',
-    category: 'atencion',
-    difficulty: 'medium',
-    duration: 8,
-    instructions: [
-      'Se mostrarán 9 imágenes con patrones.',
-      'Uno de los patrones es diferente al resto.',
-      'Haz clic en la imagen que contenga el patrón único.',
-      'Tienes 10 segundos por ronda para encontrarlo.',
-      'Completa 10 rondas para finalizar el ejercicio.',
-    ],
-    createdAt: '2023-06-20T12:30:00Z',
-    updatedAt: '2023-05-16T12:00:00Z',
-  },
-  {
-    _id: '3',
-    title: 'Cálculo Mental Avanzado',
-    description: 'Resuelve operaciones matemáticas complejas en poco tiempo.',
-    category: 'calculo',
-    difficulty: 'hard',
-    duration: 10,
-    instructions: [
-      'Se te presentarán ecuaciones con tiempo limitado.',
-      'Incluye suma, resta, multiplicación y división.',
-      'Responde tan rápido como puedas.',
-      'El tiempo se reduce en cada nivel.',
-      'Completa 20 niveles para ganar.',
-    ],
-    createdAt: '2023-07-01T08:45:00Z',
-    updatedAt: '2023-05-16T12:00:00Z',
-  },
-  {
-    _id: '4',
-    title: 'Lógica del Silogismo',
-    description: 'Determina si la conclusión de un silogismo es válida.',
+    _id: 'ex_logic_seq',
+    title: 'Secuencias lógicas',
+    description: 'Identifica el patrón y completa la secuencia correctamente.',
     category: 'logica',
     difficulty: 'medium',
-    duration: 7,
+    duration: 6,
     instructions: [
-      'Lee las dos premisas y la conclusión.',
-      'Pulsa "Válido" si la conclusión se deriva lógicamente.',
-      'Pulsa "No Válido" si no es así.',
-      'Responde a 15 silogismos.',
+      'Observa la secuencia de elementos mostrada.',
+      'Identifica el patrón lógico que siguen.',
+      'Selecciona la opción correcta para completarla.'
     ],
-    createdAt: '2023-08-10T14:20:00Z',
-    updatedAt: '2023-05-16T12:00:00Z',
+    createdAt: '2025-01-02T10:00:00Z',
+    updatedAt: '2025-01-02T10:00:00Z',
+    engine: 'logic-seq'
   },
-]
+  {
+    _id: 'ex_attention_sel',
+    title: 'Atención selectiva',
+    description: 'Encuentra el elemento objetivo entre múltiples distractores.',
+    category: 'atencion',
+    difficulty: 'medium',
+    duration: 4,
+    instructions: [
+      'Observa el conjunto de elementos en pantalla.',
+      'Identifica el elemento objetivo indicado al inicio.',
+      'Haz clic sobre todos los elementos que coincidan.'
+    ],
+    createdAt: '2025-01-03T10:00:00Z',
+    updatedAt: '2025-01-03T10:00:00Z',
+    engine: 'attention-selective'
+  },
+  {
+    _id: 'ex_calc_fast',
+    title: 'Cálculo rápido',
+    description: 'Resuelve operaciones matemáticas lo más rápido posible.',
+    category: 'calculo',
+    difficulty: 'hard',
+    duration: 6,
+    instructions: [
+      'Lee la operación matemática en pantalla.',
+      'Escribe el resultado en el cuadro de respuesta.',
+      'Resuelve tantas operaciones como puedas en el tiempo asignado.'
+    ],
+    createdAt: '2025-01-04T10:00:00Z',
+    updatedAt: '2025-01-04T10:00:00Z',
+    engine: 'mental-math'
+  },
+  {
+    _id: 'ex_speed_react',
+    title: 'Velocidad de reacción',
+    description: 'Haz clic lo más rápido posible cuando aparezca la señal.',
+    category: 'velocidad',
+    difficulty: 'easy',
+    duration: 3,
+    instructions: [
+      'Mantente atento a la pantalla.',
+      'Haz clic tan pronto como aparezca la señal visual o sonora.',
+      'Evita hacer clic antes de tiempo.'
+    ],
+    createdAt: '2025-01-05T10:00:00Z',
+    updatedAt: '2025-01-05T10:00:00Z',
+    engine: 'reaction-speed'
+  },
+  {
+    _id: 'ex_flex_cog',
+    title: 'Flexibilidad cognitiva',
+    description: 'Cambia entre diferentes reglas de clasificación lo más rápido posible.',
+    category: 'flexibilidad',
+    difficulty: 'medium',
+    duration: 5,
+    instructions: [
+      'Observa la regla actual para clasificar los elementos.',
+      'Cuando cambie la regla, adapta tu respuesta rápidamente.',
+      'Clasifica tantos elementos como puedas en el tiempo disponible.'
+    ],
+    createdAt: '2025-01-06T10:00:00Z',
+    updatedAt: '2025-01-06T10:00:00Z',
+    engine: 'cognitive-flex'
+  }
+];
 
-const mockUserProgress: UserProgress = {
+
+// ——— Helper genérico ———
+async function getJSON<T>(paths: string[], init?: RequestInit): Promise<T> {
+  let lastErr: unknown;
+  for (const p of paths) {
+    try {
+      const res = await fetch(`${API}${p}`, { ...init, credentials: 'include' });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return (await res.json()) as T;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr instanceof Error) throw lastErr;
+  throw new Error(String(lastErr ?? 'Fetch failed'));
+}
+function normalizeExercise(e: Exercise): Exercise {
+  return {
+    ...e,
+    instructions: e.instructions ?? [],
+    duration: e.duration ?? 5,
+  };
+}
+// ——— API con fallback ———
+export async function fetchExercises(): Promise<Exercise[]> {
+  if (USE_MOCK) return MOCK_EXERCISES.map(normalizeExercise);
+  try {
+    const items = await getJSON<Exercise[]>(['/exercises', '/api/exercises']);
+    return items.map(normalizeExercise);
+  } catch (err) {
+    console.warn('[fetchExercises] backend falló, usando mock:', err);
+    return MOCK_EXERCISES.map(normalizeExercise);
+  }
+}
+export async function fetchExerciseCategories(): Promise<string[]> {
+  const items = await fetchExercises();
+  return Array.from(new Set(items.map(e => e.category)));
+}
+export async function fetchExerciseById(id: string): Promise<Exercise> {
+  if (USE_MOCK) {
+    const found = MOCK_EXERCISES.find(e => e._id === id);
+    if (!found) throw new Error(`Exercise ${id} not found (mock)`);
+    return normalizeExercise(found);
+  }
+  try {
+    const e = await getJSON<Exercise>([`/exercises/${id}`, `/api/exercises/${id}`]);
+    return normalizeExercise(e);
+  } catch (err) {
+    const fallback = MOCK_EXERCISES.find(e => e._id === id);
+    if (fallback) {
+      console.warn('[fetchExerciseById] backend falló, usando mock:', err);
+      return normalizeExercise(fallback);
+    }
+    throw err;
+  }
+}
+export async function fetchRecentExercises(limit = 3): Promise<Exercise[]> {
+  const items = await fetchExercises();
+  return items
+    .slice()
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+    .slice(0, limit);
+}
+export async function startExerciseSession(exerciseId: string): Promise<{ _id: string }> {
+  // Mock directo si está activado
+  if (USE_MOCK) {
+    return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
+  }
+
+  // Rutas backend más comunes
+  const tries: Array<{ path: string; init: RequestInit }> = [
+    { path: `/exercises/${exerciseId}/sessions`, init: { method: 'POST', credentials: 'include' } },
+    { path: `/api/exercises/${exerciseId}/sessions`, init: { method: 'POST', credentials: 'include' } },
+    {
+      path: `/sessions`,
+      init: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exerciseId }),
+      },
+    },
+    {
+      path: `/api/sessions`,
+      init: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exerciseId }),
+      },
+    },
+  ];
+
+  let lastErr: unknown;
+
+  for (const t of tries) {
+    try {
+      const res = await fetch(`${API}${t.path}`, t.init);
+      if (res.ok) return await res.json();
+      lastErr = new Error(`${res.status} ${res.statusText} on ${t.path}`);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  // Fallback en desarrollo: crea sesión mock aunque el backend falle
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[startExerciseSession] backend falló, usando sesión mock:', lastErr);
+    return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
+  }
+
+  throw (lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? 'Cannot start session')));
+}
+// ---- Progreso y desafíos (mock + fallback) ----
+const MOCK_PROGRESS: UserProgress = {
   weeklyData: [5, 8, 12, 10, 15, 18, 20],
   streak: 7,
   totalExercises: 45,
   averageScore: 85,
-}
+};
 
-const mockActiveChallenges: Challenge[] = [
+const MOCK_CHALLENGES: Challenge[] = [
   {
     _id: 'ch-1',
     title: 'Maratón de Memoria',
@@ -134,89 +281,78 @@ const mockActiveChallenges: Challenge[] = [
     objective: 'Completar 50 niveles',
     durationDays: 30,
     isCompleted: false,
-    exercises: ['1', '2', '3'],
+    exercises: ['ex_mem_pairs', 'ex_attention_sel', 'ex_calc_fast'],
     expiresAt: '2025-09-01T00:00:00Z',
     participants: 150,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  {
-    _id: 'ch-2',
-    title: 'El Lógico',
-    description: 'Resuelve 20 enigmas de lógica en el menor tiempo.',
-    objective: 'Resolver 20 enigmas',
-    durationDays: 15,
-    isCompleted: false,
-    exercises: ['4', '5'],
-    expiresAt: '2025-08-25T23:59:59Z',
-    participants: 80,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: 'ch-3',
-    title: 'Atención al Detalle',
-    description: 'Encuentra diferencias en imágenes complejas.',
-    objective: 'Completar 30 niveles',
-    durationDays: 7,
-    isCompleted: false,
-    exercises: ['6', '7'],
-    expiresAt: '',
-    participants: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
-
-// ==============================================
-//          APIS DE EJERCICIOS (MOCK)
-// ==============================================
-export async function fetchExercises(): Promise<Exercise[]> {
-  await new Promise((r) => setTimeout(r, 400))
-  return mockExercises
-}
-
-export async function fetchExerciseCategories(): Promise<string[]> {
-  await new Promise((r) => setTimeout(r, 300))
-  return Array.from(new Set(mockExercises.map((ex) => ex.category)))
-}
-
+];
 export async function fetchUserProgress(): Promise<UserProgress> {
-  await new Promise((r) => setTimeout(r, 500))
-  return mockUserProgress
+  if (USE_MOCK) return MOCK_PROGRESS;
+  try {
+    const res = await fetch(`${API}/stats/me`, { credentials: 'include' });
+    if (!res.ok) throw new Error('No se pudo cargar el progreso');
+    return res.json();
+  } catch (e) {
+    console.warn('[fetchUserProgress] backend falló, usando mock:', e);
+    return MOCK_PROGRESS;
+  }
 }
-
 export async function fetchActiveChallenges(): Promise<Challenge[]> {
-  await new Promise((r) => setTimeout(r, 600))
-  return mockActiveChallenges
+  if (USE_MOCK) return MOCK_CHALLENGES;
+  try {
+    const tryGet = async (p: string) => fetch(`${API}${p}`, { credentials: 'include' });
+    let res = await tryGet('/challenges/active');
+    if (!res.ok) res = await tryGet('/api/challenges/active');
+    if (!res.ok) throw new Error('No se pudieron cargar los desafíos activos');
+    return res.json();
+  } catch (e) {
+    console.warn('[fetchActiveChallenges] backend falló, usando mock:', e);
+    return MOCK_CHALLENGES;
+  }
 }
 
-export async function fetchRecentExercises(limit: number): Promise<Exercise[]> {
-  await new Promise((r) => setTimeout(r, 400))
-  return mockExercises.slice(0, limit)
-}
-
-export async function fetchExerciseById(id: string): Promise<Exercise> {
-  await new Promise((r) => setTimeout(r, 500))
-  if (Math.random() < 0.1) throw new Error('Simulación de error de red o servidor.')
-  const exercise = mockExercises.find((ex) => ex._id === id)
-  if (!exercise) throw new Error(`Exercise with ID '${id}' not found.`)
-  return exercise
-}
-
-export async function startExerciseSession(exerciseId: string): Promise<{ _id: string }> {
-  await new Promise((r) => setTimeout(r, 300))
-  console.log(`Simulando inicio de sesión para el ejercicio ${exerciseId}`)
-  return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` }
-}
-
+// (Opcional) completar sesión con mock
 export async function completeExercise(
   sessionId: string,
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
-  await new Promise((r) => setTimeout(r, 400))
-  if (!sessionId || !sessionId.startsWith('sess_')) throw new Error('Invalid sessionId.')
-  console.log(`Simulando finalización de sesión ${sessionId} con datos:`, data)
+  // 1) Short-circuit en mock o sesiones locales
+  if (USE_MOCK || sessionId.startsWith('sess_')) {
+    return {
+      _id: `res_${Math.random().toString(36).slice(2, 11)}`,
+      sessionId,
+      score: data.score,
+      timeSpent: data.timeSpent,
+      createdAt: new Date().toISOString(),
+      metadata: data.metadata,
+    };
+  }
+
+  // 2) Intentos contra backend; si fallan, devolvemos resultado local
+  const body = JSON.stringify(data);
+  const tries = [
+    { path: `/sessions/${sessionId}/complete` },
+    { path: `/api/sessions/${sessionId}/complete` },
+  ];
+
+  for (const t of tries) {
+    try {
+      const res = await fetch(`${API_URL}${t.path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body,
+      });
+      if (res.ok) return res.json();
+    } catch {
+      // seguimos con el siguiente intento
+    }
+  }
+
+  // 3) Fallback: evita romper la UX
+  console.warn('[completeExercise] backend no disponible, devolviendo resultado mock');
   return {
     _id: `res_${Math.random().toString(36).slice(2, 11)}`,
     sessionId,
@@ -224,9 +360,8 @@ export async function completeExercise(
     timeSpent: data.timeSpent,
     createdAt: new Date().toISOString(),
     metadata: data.metadata,
-  }
+  };
 }
-
 // ==============================================
 //               AUTENTICACIÓN (MOCK)
 // ==============================================

@@ -34,7 +34,29 @@ export interface Exercise extends BaseEntity {
   duration: number // en minutos
   icon?: string
   instructions: string[] // Añadido para coincidir con mock
+  
 }
+export type ExerciseEngine =
+  | 'reaction-speed'
+  | 'memory-pairs'
+  | 'logic-seq'
+  | 'attention-selective'
+  | 'mental-math'
+  | 'cognitive-flex'
+
+// src/types/index.ts
+export interface Exercise extends BaseEntity {
+  title: string
+  description: string
+  category: ExerciseCategory
+  difficulty: Difficulty
+  duration: number
+  icon?: string
+  instructions: string[]
+  engine?: 'reaction-speed' | 'memory-pairs' | 'logic-seq' | 'attention-selective' | 'mental-math' | 'cognitive-flex'
+}
+
+
 
 // src/types/index.ts
 export interface Challenge extends BaseEntity {

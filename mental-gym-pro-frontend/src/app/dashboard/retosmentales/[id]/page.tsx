@@ -1,3 +1,4 @@
+// src/app/dashboard/retosmentales/[id]/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -6,7 +7,10 @@ import { useAuth } from '@/context/AuthContext'
 import { fetchExerciseById, startExerciseSession, completeExercise } from '@/lib/api'
 import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
 import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
-import ExerciseSession from '@/components/exercises/detail/ExerciseSession'
+// ❌ import antiguo:
+// import ExerciseSession from '@/components/exercises/detail/ExerciseSession'
+// ✅ NUEVO router por engine:
+import ExerciseRunner from '@/components/exercises/detail/ExerciseRunner'
 import ExerciseResults from '@/components/exercises/detail/ExerciseResults'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { toast } from 'react-hot-toast'
@@ -14,7 +18,6 @@ import type { Exercise, ExerciseResult } from '@/types'
 
 type Stage = 'instructions' | 'session' | 'results'
 
-// util de reintento
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 300): Promise<T> {
   try {
     return await fn()
@@ -58,7 +61,7 @@ export default function RetoMentalDetailPage() {
 
   const handleStart = async () => {
     try {
-      const session = await startExerciseSession(id)
+      const session = await startExerciseSession(id) // en modo MOCK te devuelve { _id: 'sess_...' }
       setSessionId(session._id)
       setStage('session')
     } catch (e) {
@@ -126,7 +129,8 @@ export default function RetoMentalDetailPage() {
           )}
 
           {stage === 'session' && (
-            <ExerciseSession
+            // ✅ AQUÍ usamos el router que decide el minijuego por exercise.engine
+            <ExerciseRunner
               exercise={exercise}
               onComplete={handleComplete}
               onCancel={() => setStage('instructions')}
