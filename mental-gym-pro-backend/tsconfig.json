@@ -9,6 +9,7 @@
     "esModuleInterop": true,                           /* Habilita la interoperabilidad entre los módulos de CommonJS y ES. Esto es crucial para tu error. */
     "allowSyntheticDefaultImports": true,              /* Permite las importaciones por defecto sintéticas de módulos sin exportación por defecto. */
     "forceConsistentCasingInFileNames": true,          /* Asegura que las referencias a los archivos utilicen las mayúsculas/minúsculas correctas. */
+    "types": ["node"],
 
     /* Opciones de tipo de verificación estricta */
     "strict": true,                                    /* Habilita todas las opciones de verificación de tipos estrictas. */
@@ -17,7 +18,7 @@
   },
   "include": [
     "src/**/*"
-  ],
+, "src/scripts"  ],
   "exclude": [
     "node_modules",
     "**/*.spec.ts"
