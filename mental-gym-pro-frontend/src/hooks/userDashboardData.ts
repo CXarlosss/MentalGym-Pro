@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchUserProgress, fetchActiveChallenges, fetchRecentExercises } from '@/lib/api'
+import { fetchUserProgress, fetchActiveChallenges, fetchRecentExercises } from '@/lib/api/'
 import type { Exercise, Challenge, DashboardStats } from '@/types'
 
 type DashboardData = DashboardStats & { recentExercises: Exercise[]; activeChallenges: Challenge[] }

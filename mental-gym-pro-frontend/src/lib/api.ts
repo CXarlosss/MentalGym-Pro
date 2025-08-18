@@ -1,4 +1,4 @@
-// src/lib/api.ts
+/* // src/lib/api.ts
 // ==============================================
 //                IMPORTS / TIPOS
 // ==============================================
@@ -386,7 +386,6 @@ export async function login(email: string, password: string): Promise<{ token: s
   }
   throw new Error('Credenciales inválidas')
 }
-
 export async function getCurrentUser(token: string): Promise<User> {
   await new Promise((r) => setTimeout(r, 300))
   const user = localStorage.getItem('user')
@@ -421,12 +420,10 @@ function readActivity(): ActivityEntry[] {
 function writeActivity(list: ActivityEntry[]) {
   localStorage.setItem(ACTIVITY_KEY, JSON.stringify(list))
 }
-
 export async function getActivities(): Promise<ActivityEntry[]> {
   await new Promise((r) => setTimeout(r, 150))
   return readActivity().sort((a, b) => (a.date < b.date ? 1 : -1))
 }
-
 export async function upsertTodayActivity(input: {
   steps: number
   minutes?: number
@@ -466,7 +463,6 @@ export async function upsertTodayActivity(input: {
   writeActivity(list)
   return created
 }
-
 export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
   await new Promise((r) => setTimeout(r, 120))
   const list = readActivity()
@@ -499,8 +495,6 @@ export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
 
   return { totalSteps, avgSteps, bestDay, streak, last7Days: days }
 }
-
-
 // ====== GYM WORKOUT (localStorage) ======
 // ===== Constantes =====
 const GYM_KEY = 'mgp_gym_workouts';
@@ -527,7 +521,6 @@ export function targetFromPercent1RM(oneRm: number, percent: number) {
   const raw = oneRm * (percent/100);
   return Math.round(raw / 2.5) * 2.5;
 }
-
 // ===== Rutinas / plantillas =====
 export function getRoutines(): RoutineTemplate[] {
   return readJSON<RoutineTemplate[]>(ROUTINES_KEY, []);
@@ -667,11 +660,9 @@ export async function getGroupVolumeThisWeek(): Promise<GroupVolume[]> {
   }
   return Array.from(map.entries()).map(([group,sets])=>({group,sets}));
 }
-
 // ===== Cardio =====
 function readCardio(): CardioEntry[] { return readJSON<CardioEntry[]>(CARDIO_KEY, []) }
 function writeCardio(list: CardioEntry[]) { writeJSON(CARDIO_KEY, list) }
-
 export async function addCardioToday(input: Omit<CardioEntry,'_id'|'date'|'createdAt'|'updatedAt'>) {
   const date = todayKey(); const now = new Date().toISOString();
   const entry: CardioEntry = { _id:`ca_${Math.random().toString(36).slice(2,9)}`, date, createdAt: now, updatedAt: now, ...input };
@@ -692,7 +683,6 @@ export async function getCardioWeek() {
   }
   return { days };
 }
-
 // ===== Goals & Badges =====
 export function getGoals(): CardioGoals { return readJSON<CardioGoals>(GOALS_KEY, { dailySteps:10000, weeklySessions:3 }) }
 export function setGoals(g: CardioGoals) { writeJSON(GOALS_KEY, g) }
@@ -701,8 +691,6 @@ export function unlockBadge(code: string, title: string) {
   const badges = getBadges(); if (badges.some(b=>b.code===code)) return badges;
   badges.push({ code, title, unlockedAt: new Date().toISOString() }); writeJSON(BADGES_KEY, badges); return badges;
 }
-
-
 // ===== NUTRICIÓN (localStorage) =====
 const NUTR_DAY_KEY = 'mgp_nutrition_day';
 const NUTR_FAV_KEY = 'mgp_nutrition_favs';
@@ -740,7 +728,6 @@ export function addFoodToDb(item: Omit<FoodItem,'_id'>) {
   list.push(withId); writeLS(NUTR_FOOD_DB_KEY, list);
   return withId;
 }
-
 export function getNutritionTargets(): NutritionTargets {
   return readLS<NutritionTargets>(NUTR_TARGETS_KEY, { kcal: 2200, protein: 140, carbs: 220, fat: 70, waterMl: 2000 });
 }
@@ -769,7 +756,6 @@ export function toggleFavoriteFood(name: string) {
 export function addWaterToday(ml: number) {
   const d = readDay(); d.waterMl = Math.max(0, d.waterMl + ml); writeDay(d); return d.waterMl;
 }
-
 export function addMealToday(input: { type: MealType; foodName: string; amount: number }) {
   const db = getFoodDb();
   const food = db.find(f => f.name.toLowerCase() === input.foodName.toLowerCase());
@@ -799,11 +785,9 @@ export function addMealToday(input: { type: MealType; foodName: string; amount: 
   writeDay(d);
   return entry;
 }
-
 export function getTodayNutrition(): DailyNutrition {
   return readDay();
 }
-
 export function getWeekNutrition(): WeeklyNutritionSummary {
   const map = readLS<Record<string, DailyNutrition>>(NUTR_DAY_KEY, {});
   const days: WeeklyNutritionSummary['days'] = [];
@@ -833,8 +817,10 @@ export function getWeekNutrition(): WeeklyNutritionSummary {
   };
 }
 
+// ==============================================
+//               AUTENTICACIÓN (MOCK)
+// ==============================================
 
-// src/lib/api.ts
 export async function logoutUser(): Promise<void> {
   try {
     const token = localStorage.getItem('token')
@@ -852,9 +838,7 @@ export async function logoutUser(): Promise<void> {
   }
 }
 
-
 // --- Perfil (mock/localStorage) ---
-
 export async function updateUserProfile(input: Partial<Pick<User, 'name'|'avatar'>>) {
   await new Promise(r => setTimeout(r, 200))
   const raw = localStorage.getItem('user')
@@ -877,3 +861,4 @@ export async function changePasswordMock(currentPass: string, newPass: string) {
   localStorage.setItem('lastPasswordChangeAt', new Date().toISOString())
   return true
 }
+ */

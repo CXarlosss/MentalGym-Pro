@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { changePasswordMock, getGoals, setGoals, getNutritionTargets, setNutritionTargets } from '@/lib/api'
+import { changePasswordMock, getGoals, setGoals, getNutritionTargets, setNutritionTargets } from '@/lib/api/'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 

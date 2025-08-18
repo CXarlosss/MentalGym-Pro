@@ -15,7 +15,7 @@ import {
   getTodayNutrition,
   getNutritionTargets,
   getWeeklyActivity,
-} from "@/lib/api";
+} from "@/lib/api/";
 
 import ProgressChart from "@/components/dashboard/ProgressChart";
 import ExerciseCard from "@/components/cards/ExerciseCard";
@@ -49,7 +49,6 @@ type DashboardData = DashboardStats & {
   recentExercises: Exercise[];
   activeChallenges: Challenge[];
 };
-
 // ------ Filtros de ejercicios ------
 type Filters = {
   searchQuery: string;
@@ -124,7 +123,6 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
-
     if (user) loadDashboardData();
   }, [user]);
 

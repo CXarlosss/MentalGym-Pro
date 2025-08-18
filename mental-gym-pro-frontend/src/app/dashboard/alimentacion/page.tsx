@@ -18,7 +18,7 @@ import {
   getWeekNutrition,
   getFavoritesFoods,
   toggleFavoriteFood,
-} from '@/lib/api'
+} from '@/lib/api/nutrition.local'
 
 import type {
   DailyNutrition,

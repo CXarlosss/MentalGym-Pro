@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBadges, unlockBadge } from '@/lib/api'
+import { getBadges, unlockBadge } from '@/lib/api/'
 import dynamic from 'next/dynamic'
 
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false })

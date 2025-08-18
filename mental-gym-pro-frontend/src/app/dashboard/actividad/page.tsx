@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { getActivities, upsertTodayActivity, getWeeklyActivity } from '@/lib/api'
+import { getActivities, upsertTodayActivity, getWeeklyActivity } from '@/lib/api/fitness.local'
 import type { ActivityEntry, WeeklyActivitySummary } from '@/types'
 import { motion, AnimatePresence } from 'framer-motion'
 
