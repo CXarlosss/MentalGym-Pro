@@ -1,35 +1,37 @@
+// src/models/cognitive/MentalChallenge.js
 import mongoose from "mongoose";
 
-const mentalChallengeSchema = new mongoose.Schema(
+const schema = new mongoose.Schema(
   {
-    question: {
-      type: String,
-      required: [true, "La pregunta es obligatoria"],
-    },
+    question: { type: String, required: true, trim: true },
     options: {
       type: [String],
-      required: [true, "Las opciones son obligatorias"],
-      validate: [(val) => val.length >= 2, "Debe haber al menos 2 opciones"],
+      required: true,
+      validate: [(val) => Array.isArray(val) && val.length >= 2, "Debe haber al menos 2 opciones"],
     },
-    answer: {
-      type: String,
-      required: [true, "La respuesta correcta es obligatoria"],
-    },
-    difficulty: {
-      type: String,
-      enum: ["fácil", "media", "difícil"],
-      default: "media",
-    },
-    type: {
-      type: String,
-      enum: ["lógica", "visual", "memoria", "cálculo", "creatividad"],
-      default: "lógica",
-    },
+    answer: { type: String, required: true },
+
+    // 👉 Alineado con tu FE (sin acentos)
+    difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium", index: true },
+    type: { type: String, enum: ["logica", "visual", "memoria", "calculo", "creatividad"], default: "logica", index: true },
+
+    // Extras útiles
+    explanation: { type: String, default: "" },
+    imageUrl: { type: String, default: "" },
+    timeLimitSec: { type: Number, default: 60 },
+    tags: { type: [String], default: [] },
+    isActive: { type: Boolean, default: true, index: true },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-const MentalChallenge = mongoose.model("MentalChallenge", mentalChallengeSchema);
-export default MentalChallenge;
+// Validar que la respuesta está en las opciones
+schema.pre("validate", function (next) {
+  if (this.answer && Array.isArray(this.options) && !this.options.includes(this.answer)) {
+    return next(new Error("La respuesta debe estar dentro de options"));
+  }
+  next();
+});
+
+export default mongoose.models.MentalChallenge || mongoose.model("MentalChallenge", schema);

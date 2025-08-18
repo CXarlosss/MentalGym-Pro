@@ -39,8 +39,30 @@ app.use("/api/routines", routineRoutes);
 app.use("/api/exercises", exerciseRoutes);
 app.use("/api/mental", mentalRoutes);
 app.use("/api/sessions", sessionRoutes);
+
 // Levantar servidor
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
+import cognitiveExerciseRoutes from './routes/cognitive/exercise.routes.js';
+import cognitiveSessionRoutes from './routes/cognitive/session.routes.js';
+import gymExerciseRoutes from './routes/gym/exercise.routes.js';
+
+// ...
+app.use('/api/cognitive/exercises', cognitiveExerciseRoutes);
+app.use('/api/cognitive/sessions', cognitiveSessionRoutes);
+app.use('/api/gym/exercises', gymExerciseRoutes);
+
+
+
+import fitnessActivityRoutes from './routes/fitness/activity.routes.js';
+import fitnessCardioRoutes from './routes/fitness/cardio.routes.js';
+import fitnessGymWorkoutRoutes from './routes/fitness/gymWorkout.routes.js';
+
+// ...
+app.use('/api/fitness/activity', fitnessActivityRoutes);
+app.use('/api/fitness/cardio', fitnessCardioRoutes);
+app.use('/api/fitness/gym', fitnessGymWorkoutRoutes);
+  
+
