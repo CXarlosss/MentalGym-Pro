@@ -1,4 +1,4 @@
-import Routine from "../models/Routine.js";
+import Routine from "../models/fitness/Routine.js";
 
 // @desc   Obtener todas las rutinas públicas
 // @route  GET /api/routines/public

@@ -1,4 +1,4 @@
-import ExerciseSession from "../models/ExerciseSession.js";
+import ExerciseSession from "../models/cognitive/ExerciseSession.js";
 
 // GET /api/sessions  (devuelve las sesiones del usuario autenticado)
 export const getMySessions = async (req, res) => {

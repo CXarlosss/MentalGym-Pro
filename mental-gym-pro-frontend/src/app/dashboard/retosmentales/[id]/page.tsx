@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { fetchExerciseById, startExerciseSession, completeExercise } from '@/lib/api'
+import { fetchExerciseById, startExerciseSession, completeExercise } from '@/lib/api/'
 import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
 import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
 // ❌ import antiguo:

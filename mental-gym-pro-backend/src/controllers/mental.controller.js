@@ -1,4 +1,4 @@
-import MentalChallenge from "../models/MentalChallenge.js";
+import MentalChallenge from "../models/cognitive/MentalChallenge.js";
 
 // @desc   Obtener reto mental aleatorio
 // @route  GET /api/mental/daily
