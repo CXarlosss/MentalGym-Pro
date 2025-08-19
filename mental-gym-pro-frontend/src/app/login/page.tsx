@@ -80,7 +80,7 @@ export default function LoginPage() {
               <Link href="/recuperar" className="text-indigo-600 hover:text-indigo-800 transition-colors">
                 ¿Olvidaste tu contraseña?
               </Link>
-              <Link href="/registro" className="text-gray-600 hover:text-gray-800 transition-colors">
+              <Link href="/register" className="text-gray-600 hover:text-gray-800 transition-colors">
                 Crear cuenta
               </Link>
             </div>

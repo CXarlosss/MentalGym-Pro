@@ -3,20 +3,21 @@ import type {
   FoodItem, MealEntry, MealType,
   DailyNutrition, NutritionTargets, WeeklyNutritionSummary, FoodFavorite
 } from '@/types';
-import { LS_KEYS, toLocalYMD } from './config';
+import { LS_KEYS, toLocalYMD, scopedLSKey } from './config';
+
 
 // ---------------- Utils LocalStorage ----------------
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(scopedLSKey(key)); // 👈 usa scopedLSKey
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch { return fallback; }
 }
 function writeJSON<T>(key: string, val: T) {
-  localStorage.setItem(key, JSON.stringify(val));
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(scopedLSKey(key), JSON.stringify(val)); // 👈 usa scopedLSKey
 }
-
 // ---------------- Food DB (LS) ----------------
 const FOOD_DB_KEY = LS_KEYS.nutrFoodDb;
 
@@ -52,8 +53,18 @@ export function getNutritionTargets(): NutritionTargets {
     kcal: 2200, protein: 140, carbs: 220, fat: 70, waterMl: 2000,
   });
 }
-export function setNutritionTargets(t: NutritionTargets) {
-  writeJSON(TARGETS_KEY, t);
+// src/lib/api/nutrition.local.ts
+export function setNutritionTargets(t: Partial<NutritionTargets>): NutritionTargets {
+  const current = getNutritionTargets();
+  const merged: NutritionTargets = {
+    kcal: t.kcal ?? current.kcal,
+    protein: t.protein ?? current.protein,
+    carbs: t.carbs ?? current.carbs,
+    fat: t.fat ?? current.fat,
+    waterMl: t.waterMl ?? current.waterMl,
+  };
+  writeJSON(TARGETS_KEY, merged);
+  return merged;
 }
 
 // ---------------- Día & Semana (LS) ----------------

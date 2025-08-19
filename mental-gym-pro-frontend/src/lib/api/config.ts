@@ -26,6 +26,39 @@ export const LS_KEYS = {
 // ===============================
 //         Helpers de fecha
 // ===============================
+
+// --- Helpers para namespacing por usuario en localStorage ---
+export function getCurrentUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    return u?._id || u?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+export function scopedLSKey(baseKey: string): string {
+  const id = getCurrentUserId();
+  return id ? `${baseKey}::${id}` : baseKey;
+}
+
+// Limpia las **claves antiguas** sin scope (evitas ver datos de otro user)
+export function clearLegacyLocalData(): void {
+  if (typeof window === 'undefined') return;
+  Object.values(LS_KEYS).forEach((k) => localStorage.removeItem(k));
+}
+
+// (opcional) limpiar específicamente las claves de un usuario
+export function clearUserScopedData(userId?: string): void {
+  if (typeof window === 'undefined') return;
+  const id = userId || getCurrentUserId();
+  if (!id) return;
+  Object.values(LS_KEYS).forEach((k) => localStorage.removeItem(`${k}::${id}`));
+}
+
 export function toLocalYMD(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

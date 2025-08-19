@@ -14,23 +14,28 @@ import type {
   User,
 } from '@/types';
 
-import { LS_KEYS, toLocalYMD, todayKey } from './config';
+import { LS_KEYS, toLocalYMD, todayKey, scopedLSKey } from './config';
 
+// ===============================
+//      Utils LocalStorage
+// ===============================
 // ===============================
 //      Utils LocalStorage
 // ===============================
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(scopedLSKey(key));
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
 }
 function writeJSON<T>(key: string, val: T) {
-  localStorage.setItem(key, JSON.stringify(val));
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(scopedLSKey(key), JSON.stringify(val));
 }
+
 
 // ===============================
 //        ACTIVIDAD (pasos)

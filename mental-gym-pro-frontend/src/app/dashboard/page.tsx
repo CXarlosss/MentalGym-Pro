@@ -85,46 +85,56 @@ export default function DashboardPage() {
 
   // ---------- Carga inicial ----------
   useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        setLoading(true);
+  async function loadDashboardData() {
+    try {
+      setLoading(true);
 
-        // Datos principales del dashboard
-        const [progress, challenges, recent, allExercises, cats, wAct] =
-          await Promise.all([
-            fetchUserProgress(),
-            fetchActiveChallenges(),
-            fetchRecentExercises(3),
-            fetchExercises(),
-            fetchExerciseCategories(),
-            getWeeklyActivity(), // async
-          ]);
+      // Mete también today/targets en el Promise.all
+      const [
+        progress,
+        challenges,
+        recent,
+        allExercises,
+        cats,
+        wAct,
+        todayData,
+        targetsData,
+      ] = await Promise.all([
+        fetchUserProgress(),
+        fetchActiveChallenges(),
+        fetchRecentExercises(3),
+        fetchExercises(),
+        fetchExerciseCategories(),
+        getWeeklyActivity(),
+        getTodayNutrition(),     // 👈 ahora async
+        getNutritionTargets(),   // 👈 ahora async
+      ]);
 
-        setData({
-          weeklyData: progress.weeklyData,
-          streak: progress.streak,
-          totalExercises: progress.totalExercises,
-          averageScore: progress.averageScore,
-          recentExercises: recent,
-          activeChallenges: challenges,
-        });
+      setData({
+        weeklyData: progress.weeklyData,
+        streak: progress.streak,
+        totalExercises: progress.totalExercises,
+        averageScore: progress.averageScore,
+        recentExercises: recent,
+        activeChallenges: challenges,
+      });
 
-        setExercises(allExercises);
-        setCategories(cats);
-        setWeekAct(wAct);
+      setExercises(allExercises);
+      setCategories(cats);
+      setWeekAct(wAct);
 
-        // Estas son síncronas (localStorage), mejor fuera del Promise.all
-        setToday(getTodayNutrition());
-        setTargets(getNutritionTargets());
-      } catch (err) {
-        console.error(err);
-        setError("Error al cargar los datos del dashboard");
-      } finally {
-        setLoading(false);
-      }
+      setToday(todayData);       // 👈 objeto, no Promise
+      setTargets(targetsData);   // 👈 objeto, no Promise
+    } catch (err) {
+      console.error(err);
+      setError("Error al cargar los datos del dashboard");
+    } finally {
+      setLoading(false);
     }
-    if (user) loadDashboardData();
-  }, [user]);
+  }
+  if (user) loadDashboardData();
+}, [user]);
+
 
   // ---------- Filtrado ----------
   const filteredExercises = useMemo(() => {

@@ -1,62 +1,86 @@
 // src/lib/api/index.ts
+import { USE_MOCK } from './config';
+
+// Resto de módulos "puros" (no necesitan fallback especial)
 export * from './config';
 export * from './exercises';
 export * from './progress';
-export * from './fitness.local';
-export * from './nutrition.local';
+import * as UserApi from './user.api';           // 👈 añade esto
 
+// ====== FITNESS: API con fallback a LOCAL ======
+import * as FitLocal from './fitness.local';
+import * as FitApi from './fitness.api';
 
-// src/lib/api/index.ts
-import { USE_MOCK } from './config';
-import * as Local from './fitness.local';
-import * as Api from './fitness.api';
-
-// ====== GYM ======
-export const addGymSetToday = async (set: Parameters<typeof Api.addGymSetToday>[0]) =>
-  USE_MOCK ? Local.addGymSetToday(set) : (await Api.addGymSetToday(set).catch(() => Local.addGymSetToday(set)));
+// GYM
+export const addGymSetToday = async (set: Parameters<typeof FitApi.addGymSetToday>[0]) =>
+  USE_MOCK
+    ? FitLocal.addGymSetToday(set)
+    : await FitApi.addGymSetToday(set).catch(() => FitLocal.addGymSetToday(set));
 
 export const getGymWorkouts = async () =>
-  USE_MOCK ? Local.getGymWorkouts() : (await Api.getGymWorkouts().catch(() => Local.getGymWorkouts()));
+  USE_MOCK ? FitLocal.getGymWorkouts() : await FitApi.getGymWorkouts().catch(FitLocal.getGymWorkouts);
 
 export const getGymWeeklySummary = async () =>
-  USE_MOCK ? Local.getGymWeeklySummary() : (await Api.getGymWeeklySummary().catch(() => Local.getGymWeeklySummary()));
+  USE_MOCK ? FitLocal.getGymWeeklySummary() : await FitApi.getGymWeeklySummary().catch(FitLocal.getGymWeeklySummary);
 
 export const getGroupVolumeThisWeek = async () =>
-  USE_MOCK ? Local.getGroupVolumeThisWeek() : (await Api.getGroupVolumeThisWeek().catch(() => Local.getGroupVolumeThisWeek()));
+  USE_MOCK ? FitLocal.getGroupVolumeThisWeek() : await FitApi.getGroupVolumeThisWeek().catch(FitLocal.getGroupVolumeThisWeek);
 
-// ====== ACTIVITY ======
+// Activity (pasos)
 export const getActivities = async () =>
-  USE_MOCK ? Local.getActivities() : (await Api.getActivities().catch(() => Local.getActivities()));
+  USE_MOCK ? FitLocal.getActivities() : await FitApi.getActivities().catch(FitLocal.getActivities);
 
-export const upsertTodayActivity = async (input: Parameters<typeof Api.upsertTodayActivity>[0]) =>
-  USE_MOCK ? Local.upsertTodayActivity(input) : (await Api.upsertTodayActivity(input).catch(() => Local.upsertTodayActivity(input)));
+export const upsertTodayActivity = async (input: Parameters<typeof FitApi.upsertTodayActivity>[0]) =>
+  USE_MOCK
+    ? FitLocal.upsertTodayActivity(input)
+    : await FitApi.upsertTodayActivity(input).catch(() => FitLocal.upsertTodayActivity(input));
 
 export const getWeeklyActivity = async () =>
-  USE_MOCK ? Local.getWeeklyActivity() : (await Api.getWeeklyActivity().catch(() => Local.getWeeklyActivity()));
+  USE_MOCK ? FitLocal.getWeeklyActivity() : await FitApi.getWeeklyActivity().catch(FitLocal.getWeeklyActivity);
 
-// ====== CARDIO ======
-export const addCardioToday = async (input: Parameters<typeof Api.addCardioToday>[0]) =>
-  USE_MOCK ? Local.addCardioToday(input) : (await Api.addCardioToday(input).catch(() => Local.addCardioToday(input)));
+// Cardio
+export const addCardioToday = async (input: Parameters<typeof FitApi.addCardioToday>[0]) =>
+  USE_MOCK ? FitLocal.addCardioToday(input) : await FitApi.addCardioToday(input).catch(() => FitLocal.addCardioToday(input));
 
 export const getCardioWeek = async () =>
-  USE_MOCK ? Local.getCardioWeek() : (await Api.getCardioWeek().catch(() => Local.getCardioWeek()));
+  USE_MOCK ? FitLocal.getCardioWeek() : await FitApi.getCardioWeek().catch(FitLocal.getCardioWeek);
 
-// ====== utilidades fuerza & LS helpers que solo existen en local ======
-export const epley1RM = Local.epley1RM;
-export const brzycki1RM = Local.brzycki1RM;
-export const targetFromPercent1RM = Local.targetFromPercent1RM;
+// Helpers SOLO locales (no hay versión API)
+export const epley1RM = FitLocal.epley1RM;
+export const brzycki1RM = FitLocal.brzycki1RM;
+export const targetFromPercent1RM = FitLocal.targetFromPercent1RM;
 
-export const getRoutines = Local.getRoutines;
-export const saveRoutine = Local.saveRoutine;
-export const duplicateRoutine = Local.duplicateRoutine;
-export const seedDefaultRoutinesOnce = Local.seedDefaultRoutinesOnce;
+export const getRoutines = FitLocal.getRoutines;
+export const saveRoutine = FitLocal.saveRoutine;
+export const duplicateRoutine = FitLocal.duplicateRoutine;
+export const seedDefaultRoutinesOnce = FitLocal.seedDefaultRoutinesOnce;
 
-export const toggleFavoriteExercise = Local.toggleFavoriteExercise;
-export const getFavoriteExercises = Local.getFavoriteExercises;
+export const toggleFavoriteExercise = FitLocal.toggleFavoriteExercise;
+export const getFavoriteExercises = FitLocal.getFavoriteExercises;
 
-export const getGoals = Local.getGoals;
-export const setGoals = Local.setGoals;
-export const getBadges = Local.getBadges;
-export const unlockBadge = Local.unlockBadge;
+export const getGoals = FitLocal.getGoals;
+export const setGoals = FitLocal.setGoals;
+export const getBadges = FitLocal.getBadges;
+export const unlockBadge = FitLocal.unlockBadge;
 
+// ====== NUTRICIÓN: API con fallback a LOCAL ======
+import * as NutLocal from './nutrition.local';
+import * as NutApi from './nutrition.api';
 
+// Resúmenes / targets
+export const getTodayNutrition = async () =>
+  USE_MOCK ? NutLocal.getTodayNutrition() : await NutApi.getTodayNutrition().catch(NutLocal.getTodayNutrition);
+
+export const getWeekNutrition = async () =>
+  USE_MOCK ? NutLocal.getWeekNutrition() : await NutApi.getWeekNutrition().catch(NutLocal.getWeekNutrition);
+
+export const getNutritionTargets = async () =>
+  USE_MOCK ? NutLocal.getNutritionTargets() : await NutApi.getNutritionTargets().catch(NutLocal.getNutritionTargets);
+
+export const setNutritionTargets = async (t: Parameters<typeof NutApi.setNutritionTargets>[0]) =>
+  USE_MOCK ? NutLocal.setNutritionTargets(t) : await NutApi.setNutritionTargets(t).catch(() => NutLocal.setNutritionTargets(t));
+
+// Operaciones locales cómodas (solo si las usas en UI):
+export const addWaterToday = NutLocal.addWaterToday;
+export const addMealToday = NutLocal.addMealToday;
+// Si luego creas endpoints reales para agua/comidas, haremos sus wrappers API también.
