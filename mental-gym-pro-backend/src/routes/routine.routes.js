@@ -6,7 +6,7 @@ import {
   updateRoutine,
   deleteRoutine,
 } from "../controllers/routine.controller.js";
-import protect from "../middleware/auth.js";
+import {protect} from "../middleware/auth.js";
 
 const router = express.Router();
 

@@ -2,8 +2,7 @@
 import express from "express";
 import { body, validationResult } from "express-validator";
 import { register, login } from "../controllers/auth.controller.js";
-import protect from "../middleware/auth.js";
-
+import { protect } from "../middleware/auth.js";
 const router = express.Router();
 
 // Ruta: /api/auth/register

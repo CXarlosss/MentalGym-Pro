@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import path from 'path'
-import Exercise from '../models/Exercise.js'
+import Exercise from '../models/cognitive/Exercise.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

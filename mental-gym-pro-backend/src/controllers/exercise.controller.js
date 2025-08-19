@@ -1,4 +1,4 @@
-// src/controllers/cognitive/exerciseController.js
+/* // src/controllers/cognitive/exerciseController.js
 import mongoose from 'mongoose';
 import CognitiveExercise from '../../models/cognitive/Exercise.js';
 
@@ -129,3 +129,4 @@ export const deleteExercise = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar ejercicio' });
   }
 };
+ */

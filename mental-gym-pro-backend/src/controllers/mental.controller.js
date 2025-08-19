@@ -1,4 +1,4 @@
-import MentalChallenge from "../models/cognitive/MentalChallenge.js";
+/* import MentalChallenge from "../models/cognitive/MentalChallenge.js";
 
 // @desc   Obtener reto mental aleatorio
 // @route  GET /api/mental/daily
@@ -41,3 +41,4 @@ export const checkChallengeAnswer = async (req, res) => {
     res.status(500).json({ message: "Error al comprobar respuesta", error });
   }
 };
+ */

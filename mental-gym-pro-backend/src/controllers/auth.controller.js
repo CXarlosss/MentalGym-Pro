@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import User from "../models//user/User.js"; // Asegúrate de que la ruta sea correcta
+import User from "../models/user/User.js"; // Asegúrate de que la ruta sea correcta
 import generateToken from "../utils/genterateToken.js";
 
 

@@ -1,5 +1,5 @@
 // src/controllers/mental.controller.js
-import MentalChallenge from "../models/cognitive/MentalChallenge.js";
+import MentalChallenge from "../../models/cognitive/MentalChallenge.js";
 
 // GET /api/mental   (list + filtros + paginación)
 export const listChallenges = async (req, res) => {

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Exercise from "../models/Exercise.js";
+import Exercise from "../models/cognitive/Exercise.js";
 import connectDB from "../config/db.js";
 
 dotenv.config();

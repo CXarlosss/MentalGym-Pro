@@ -1,4 +1,4 @@
-import User from "../models/user/User.js";
+/* import User from "../models/user/User.js";
 
 // @desc   Obtener perfil del usuario autenticado
 // @route  GET /api/users/me
@@ -90,3 +90,4 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ message: "Error al obtener usuario", error });
   }
 };
+ */

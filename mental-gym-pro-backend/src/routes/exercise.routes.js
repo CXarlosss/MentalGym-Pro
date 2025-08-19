@@ -3,7 +3,7 @@ import {
   getExercises,
   createExercise,
 } from "../controllers/exercise.controller.js";
-import protect from "../middleware/auth.js";
+import {protect} from "../middleware/auth.js";
 
 const router = express.Router();
 

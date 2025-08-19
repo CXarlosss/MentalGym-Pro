@@ -4,8 +4,8 @@ import {
   updateProfile,
   toggleFollowUser,
   getUserById,
-} from "../controllers/user.controller.js";
-import protect from "../middleware/auth.js";
+} from "../controllers/user/user.controller.js";
+import {protect} from "../middleware/auth.js";
 
 const router = express.Router();
 

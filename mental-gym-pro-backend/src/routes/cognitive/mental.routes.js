@@ -7,8 +7,8 @@ import {
   createChallenge,
   updateChallenge,
   deleteChallenge,
-} from "../controllers/mental.controller.js";
-import { protect } from "../middleware/auth.js";
+} from "../../controllers/cognitive/mental.controller.js";
+import { protect } from "../../middleware/auth.js";
 
 const r = Router();
 

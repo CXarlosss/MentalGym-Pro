@@ -1,4 +1,4 @@
-import ExerciseSession from "../models/cognitive/ExerciseSession.js";
+/* import ExerciseSession from "../models/cognitive/ExerciseSession.js";
 
 // GET /api/sessions  (devuelve las sesiones del usuario autenticado)
 export const getMySessions = async (req, res) => {
@@ -33,3 +33,4 @@ export const createSession = async (req, res) => {
     res.status(500).json({ message: "Error al crear sesión", error: err });
   }
 };
+ */

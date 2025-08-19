@@ -1,6 +1,8 @@
 // src/controllers/fitness/gymWorkout.controller.js
 import GymWorkout from '../../models/fitness/GymWorkout.js';
 
+/** @typedef {{ totalSets: number, totalVolume: number }} DayAgg */
+
 function toLocalYMD(d = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -13,9 +15,9 @@ export const addGymSetToday = async (req, res) => {
   try {
     const user = req.user._id;
     const date = toLocalYMD(new Date());
-    const { exercise, weight, reps, tags, marker } = req.body || {};
+    const { exercise, weight, reps, tags, marker, rpe, notes } = req.body || {};
 
-    if (!reps || reps <= 0) return res.status(400).json({ message: 'reps es obligatorio (>0)' });
+    if (reps == null || reps <= 0) return res.status(400).json({ message: 'reps es obligatorio (>0)' });
     if (weight == null) return res.status(400).json({ message: 'weight es obligatorio' });
 
     const set = {
@@ -23,7 +25,9 @@ export const addGymSetToday = async (req, res) => {
       weight: Number(weight) || 0,
       reps: Number(reps) || 0,
       tags: Array.isArray(tags) ? tags : [],
-      marker: marker ?? 'work',
+      marker: marker ?? null,          // 'warmup' | null
+      rpe: rpe != null ? Number(rpe) : undefined,
+      notes: notes || '',
       createdAt: new Date(),
     };
 
@@ -33,10 +37,10 @@ export const addGymSetToday = async (req, res) => {
       { new: true, upsert: true }
     );
 
-    res.status(201).json(doc);
+    return res.status(201).json(doc);
   } catch (err) {
     console.error('[fitness.addGymSetToday]', err);
-    res.status(500).json({ message: 'Error al guardar set' });
+    return res.status(500).json({ message: 'Error al guardar set' });
   }
 };
 
@@ -47,10 +51,10 @@ export const getGymWorkouts = async (req, res) => {
       .find({ user: req.user._id })
       .sort({ date: -1 })
       .lean();
-    res.json(docs);
+    return res.json(docs);
   } catch (err) {
     console.error('[fitness.getGymWorkouts]', err);
-    res.status(500).json({ message: 'Error al listar workouts' });
+    return res.status(500).json({ message: 'Error al listar workouts' });
   }
 };
 
@@ -60,25 +64,36 @@ export const getGymWeeklySummary = async (req, res) => {
     const user = req.user._id;
     const keys = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
+      const d = new Date();
+      d.setDate(d.getDate() - i);
       keys.push(toLocalYMD(d));
     }
 
     const docs = await GymWorkout.find({ user, date: { $in: keys } }).lean();
+
+    /** @type {Map<string, DayAgg>} */
     const map = new Map(keys.map(k => [k, { totalSets: 0, totalVolume: 0 }]));
 
     for (const w of docs) {
       const slot = map.get(w.date);
       if (!slot) continue;
       const totalSets = (w.sets || []).length;
-      const totalVolume = (w.sets || []).reduce((a, s) => a + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0);
+      const totalVolume = (w.sets || []).reduce(
+        (a, s) => a + (Number(s.weight) || 0) * (Number(s.reps) || 0),
+        0
+      );
       slot.totalSets += totalSets;
       slot.totalVolume += totalVolume;
     }
 
-    const last7Days = keys.map(k => ({ date: k, ...map.get(k) }));
-    const totalVolume = last7Days.reduce((a, d) => a + d.totalVolume, 0);
+    const last7Days = keys.map(k => {
+      const slot = map.get(k) || { totalSets: 0, totalVolume: 0 };
+      return { date: k, totalSets: slot.totalSets, totalVolume: slot.totalVolume };
+    });
 
+    const totalVolume = last7Days.reduce((a, d) => a + (d.totalVolume || 0), 0);
+
+    /** @type {{ date: string, totalVolume: number } | null} */
     let topVolumeDay = null;
     for (const d of last7Days) {
       if (!topVolumeDay || d.totalVolume > topVolumeDay.totalVolume) {
@@ -91,10 +106,10 @@ export const getGymWeeklySummary = async (req, res) => {
       if (last7Days[i].totalSets > 0) streak++; else break;
     }
 
-    res.json({ last7Days, totalVolume, topVolumeDay, streak });
+    return res.json({ last7Days, totalVolume, topVolumeDay, streak });
   } catch (err) {
     console.error('[fitness.getGymWeeklySummary]', err);
-    res.status(500).json({ message: 'Error al obtener resumen semanal' });
+    return res.status(500).json({ message: 'Error al obtener resumen semanal' });
   }
 };
 
@@ -104,26 +119,27 @@ export const getGroupVolumeThisWeek = async (req, res) => {
     const user = req.user._id;
     const keys = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
+      const d = new Date();
+      d.setDate(d.getDate() - i);
       keys.push(toLocalYMD(d));
     }
 
     const docs = await GymWorkout.find({ user, date: { $in: keys } }).lean();
-    const groupCounts = new Map();
+    const counts = new Map(); // tag -> sets
 
     for (const w of docs) {
       for (const s of (w.sets || [])) {
         if (s.marker === 'warmup') continue;
         for (const t of (s.tags || [])) {
-          groupCounts.set(t, (groupCounts.get(t) || 0) + 1);
+          counts.set(t, (counts.get(t) || 0) + 1);
         }
       }
     }
 
-    const result = Array.from(groupCounts.entries()).map(([group, sets]) => ({ group, sets }));
-    res.json(result);
+    const result = Array.from(counts.entries()).map(([group, sets]) => ({ group, sets }));
+    return res.json(result);
   } catch (err) {
     console.error('[fitness.getGroupVolumeThisWeek]', err);
-    res.status(500).json({ message: 'Error al obtener volumen por grupo' });
+    return res.status(500).json({ message: 'Error al obtener volumen por grupo' });
   }
 };
