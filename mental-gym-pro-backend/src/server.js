@@ -10,14 +10,14 @@ import { notFound, errorHandler } from './middleware/errorHandler.js';
 // ===== Rutas =====
 // Auth & User
 import authRoutes from './routes/auth.routes.js';
-import userRoutes from './routes/user.routes.js';
+import userRoutes from './routes/user/user.routes.js';
 
 // Cognitivo (ejercicios mentales + sesiones)
 import cognitiveExerciseRoutes from './routes/cognitive/exercise.routes.js';
 import cognitiveSessionRoutes from './routes/cognitive/session.routes.js';
 
 // Mental challenges (tipo Q/A)
-import mentalRoutes from './routes/mental.routes.js';
+import mentalRoutes from './routes/cognitive/mental.routes.js';
 
 // Gamificación (retos y badges)
 import challengeRoutes from './routes/gamification/challenge.routes.js';

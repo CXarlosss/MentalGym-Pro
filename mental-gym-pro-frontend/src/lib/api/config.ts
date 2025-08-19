@@ -3,8 +3,9 @@
 // ===============================
 //     Configuración y flags
 // ===============================
-export const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === '1';
+export const API =
+  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+export const USE_MOCK: boolean = process.env.NEXT_PUBLIC_USE_MOCK === '1';
 
 // Claves de LocalStorage (una sola fuente de verdad)
 export const LS_KEYS = {
@@ -25,35 +26,121 @@ export const LS_KEYS = {
 // ===============================
 //         Helpers de fecha
 // ===============================
-// Devuelve YYYY-MM-DD en zona local (evita líos de TZ en gráficos)
-export function toLocalYMD(d: Date) {
+export function toLocalYMD(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-export const todayKey = (d = new Date()) => toLocalYMD(d);
+export const todayKey = (d: Date = new Date()): string => toLocalYMD(d);
 
 // ===============================
-//        Helpers de HTTP
+//         Helpers de URL/Query
 // ===============================
-function toURL(p: string) {
-  // Soporta rutas absolutas por si acaso
-  if (/^https?:\/\//i.test(p)) return p;
-  return `${API}${p}`;
+function joinURL(base: string, path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${base}/${path}`.replace(/([^:]\/)\/+/g, '$1');
+}
+
+// Valores permitidos en querystring
+type Primitive = string | number | boolean;
+type QueryScalar = Primitive | null | undefined | Date;
+export type QueryParams = Record<string, QueryScalar | QueryScalar[]>;
+
+export function qs(params: QueryParams): string {
+  const p = new URLSearchParams();
+
+  const append = (k: string, v: QueryScalar): void => {
+    if (v === undefined || v === null) return;
+    if (v instanceof Date) {
+      p.append(k, v.toISOString());
+      return;
+    }
+    p.append(k, String(v));
+  };
+
+  Object.entries(params).forEach(([k, v]) => {
+    if (Array.isArray(v)) v.forEach((vv) => append(k, vv));
+    else append(k, v);
+  });
+
+  const str = p.toString();
+  return str ? `?${str}` : '';
+}
+
+// ===============================
+//        Helpers de auth/HTTP
+// ===============================
+function authHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function safeJSON(res: Response): Promise<unknown | null> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    // Devuelve texto plano si no es JSON válido
+    return text;
+  }
+}
+
+export class ApiError<E = unknown> extends Error {
+  status: number;
+  body: E | null;
+  constructor(status: number, message: string, body: E | null = null) {
+    super(message);
+    this.status = status;
+    this.body = body;
+  }
 }
 
 /**
- * Intenta GET sobre varias rutas (en orden) y devuelve la primera que funcione.
- * Añade credentials: 'include' por defecto.
+ * fetch con headers JSON, Authorization y manejo de error uniforme
+ */
+export async function apiFetch<T, E = unknown>(
+  path: string,
+  init: RequestInit = {}
+): Promise<T> {
+  const url = joinURL(API, path);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...authHeaders(),
+    ...(init.headers as Record<string, string> | undefined),
+  };
+
+  const res = await fetch(url, {
+    credentials: 'include',
+    ...init,
+    headers,
+  });
+
+  if (!res.ok) {
+    const body = (await safeJSON(res)) as E | null;
+    const msg =
+      (body && typeof body === 'object' && body !== null && 'message' in body
+        ? String((body as { message?: unknown }).message)
+        : null) || `${res.status} ${res.statusText}`;
+    throw new ApiError<E>(res.status, msg, body);
+  }
+
+  if (res.status === 204) return undefined as unknown as T;
+  const data = (await safeJSON(res)) as T;
+  return data;
+}
+
+/**
+ * GET sobre múltiples rutas en orden (fallback)
  */
 export async function getJSON<T>(paths: string[], init?: RequestInit): Promise<T> {
   let lastErr: unknown;
   for (const p of paths) {
     try {
-      const res = await fetch(toURL(p), { ...init, credentials: 'include' });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return (await res.json()) as T;
+      // eslint-disable-next-line no-await-in-loop
+      return await apiFetch<T>(p, { method: 'GET', ...(init || {}) });
     } catch (e) {
       lastErr = e;
     }
@@ -62,21 +149,18 @@ export async function getJSON<T>(paths: string[], init?: RequestInit): Promise<T
   throw new Error(String(lastErr ?? 'Fetch failed'));
 }
 
-/**
- * POST JSON a una ruta. Lanza si no es 2xx. Incluye credentials.
- */
-export async function postJSON<T>(
-  path: string,
-  body: unknown,
-  init?: RequestInit
-): Promise<T> {
-  const res = await fetch(toURL(path), {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    body: JSON.stringify(body),
-    ...init,
-  });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return (await res.json()) as T;
-}
+// Atajos verbos (tipados)
+export const get = <T>(path: string, init?: RequestInit) =>
+  apiFetch<T>(path, { method: 'GET', ...(init || {}) });
+
+export const postJSON = <T>(path: string, body?: unknown, init?: RequestInit) =>
+  apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}), ...(init || {}) });
+
+export const patchJSON = <T>(path: string, body?: unknown, init?: RequestInit) =>
+  apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body ?? {}), ...(init || {}) });
+
+export const putJSON = <T>(path: string, body?: unknown, init?: RequestInit) =>
+  apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body ?? {}), ...(init || {}) });
+
+export const delJSON = <T>(path: string, init?: RequestInit) =>
+  apiFetch<T>(path, { method: 'DELETE', ...(init || {}) });

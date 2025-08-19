@@ -43,12 +43,10 @@ function readActivity(): ActivityEntry[] {
 function writeActivity(list: ActivityEntry[]) {
   writeJSON(ACTIVITY_KEY, list);
 }
-
 export async function getActivities(): Promise<ActivityEntry[]> {
   await new Promise((r) => setTimeout(r, 150));
   return readActivity().sort((a, b) => (a.date < b.date ? 1 : -1));
 }
-
 export async function upsertTodayActivity(input: {
   steps: number;
   minutes?: number;
@@ -88,7 +86,6 @@ export async function upsertTodayActivity(input: {
   writeActivity(list);
   return created;
 }
-
 export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
   await new Promise((r) => setTimeout(r, 120));
   const list = readActivity();
@@ -119,7 +116,6 @@ export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
 
   return { totalSteps, avgSteps, bestDay, streak, last7Days: days };
 }
-
 // ===============================
 //            GYM (sets)
 // ===============================
@@ -131,7 +127,6 @@ function readGym(): WorkoutEntry[] {
 function writeGym(list: WorkoutEntry[]) {
   writeJSON(GYM_KEY, list);
 }
-
 export async function addGymSetToday(set: Omit<LiftSet, '_id' | 'createdAt'>) {
   await new Promise((r) => setTimeout(r, 50));
   const list = readGym();
@@ -151,12 +146,10 @@ export async function addGymSetToday(set: Omit<LiftSet, '_id' | 'createdAt'>) {
   writeGym(list);
   return entry;
 }
-
 export async function getGymWorkouts(): Promise<WorkoutEntry[]> {
   await new Promise((r) => setTimeout(r, 30));
   return readGym().sort((a, b) => (a.date < b.date ? 1 : -1));
 }
-
 export async function getGymWeeklySummary(): Promise<WorkoutWeeklySummary> {
   await new Promise((r) => setTimeout(r, 30));
   const list = readGym();
@@ -188,7 +181,6 @@ export async function getGymWeeklySummary(): Promise<WorkoutWeeklySummary> {
 
   return { last7Days: days, totalVolume, topVolumeDay, streak };
 }
-
 export async function getGroupVolumeThisWeek(): Promise<GroupVolume[]> {
   const list = readGym();
   const map = new Map<LiftTag, number>();
@@ -208,7 +200,6 @@ export async function getGroupVolumeThisWeek(): Promise<GroupVolume[]> {
 
   return Array.from(map.entries()).map(([group, sets]) => ({ group, sets }));
 }
-
 // ===============================
 //          RUTINAS (LS)
 // ===============================
@@ -217,7 +208,6 @@ const ROUTINES_KEY = LS_KEYS.routines;
 export function getRoutines(): RoutineTemplate[] {
   return readJSON<RoutineTemplate[]>(ROUTINES_KEY, []);
 }
-
 export function saveRoutine(rt: RoutineTemplate) {
   const list = getRoutines();
   const idx = list.findIndex((r) => r._id === rt._id);
@@ -248,8 +238,6 @@ export function duplicateRoutine(id: string) {
   saveRoutine(copy);
   return copy;
 }
-
-
 export function seedDefaultRoutinesOnce() {
   const list = getRoutines();
   if (list.length) return;
@@ -320,7 +308,6 @@ export function seedDefaultRoutinesOnce() {
   ];
   writeJSON(ROUTINES_KEY, seed);
 }
-
 // ===============================
 //     Favoritos de Ejercicios
 // ===============================

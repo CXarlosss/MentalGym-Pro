@@ -1,4 +1,4 @@
-import express from "express";
+/* import express from "express";
 import {
   getMyProfile,
   updateProfile,
@@ -18,3 +18,4 @@ router.post("/follow/:id", protect, toggleFollowUser);
 router.get("/:id", getUserById);
 
 export default router;
+ */

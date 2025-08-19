@@ -1,6 +1,6 @@
 // src/lib/api/exercises.ts
 import type { Exercise, ExerciseResult, ExerciseSession } from '@/types';
-import { API, USE_MOCK, getJSON, postJSON } from './config';
+import { USE_MOCK, getJSON, postJSON, get } from './config';
 
 // ===============================
 //      MOCKS + NORMALIZADOR
@@ -16,11 +16,11 @@ const MOCK_EXERCISES: Exercise[] = [
     instructions: [
       'Haz clic en dos cartas para voltearlas.',
       'Si son iguales, quedarán descubiertas.',
-      'Encuentra todas las parejas en el menor tiempo posible.'
+      'Encuentra todas las parejas en el menor tiempo posible.',
     ],
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
-    engine: 'memory-pairs'
+    engine: 'memory-pairs',
   },
   {
     _id: 'ex_logic_seq',
@@ -32,11 +32,11 @@ const MOCK_EXERCISES: Exercise[] = [
     instructions: [
       'Observa la secuencia de elementos mostrada.',
       'Identifica el patrón lógico que siguen.',
-      'Selecciona la opción correcta para completarla.'
+      'Selecciona la opción correcta para completarla.',
     ],
     createdAt: '2025-01-02T10:00:00Z',
     updatedAt: '2025-01-02T10:00:00Z',
-    engine: 'logic-seq'
+    engine: 'logic-seq',
   },
   {
     _id: 'ex_attention_sel',
@@ -48,11 +48,11 @@ const MOCK_EXERCISES: Exercise[] = [
     instructions: [
       'Observa el conjunto de elementos en pantalla.',
       'Identifica el elemento objetivo indicado al inicio.',
-      'Haz clic sobre todos los elementos que coincidan.'
+      'Haz clic sobre todos los elementos que coincidan.',
     ],
     createdAt: '2025-01-03T10:00:00Z',
     updatedAt: '2025-01-03T10:00:00Z',
-    engine: 'attention-selective'
+    engine: 'attention-selective',
   },
   {
     _id: 'ex_calc_fast',
@@ -64,11 +64,11 @@ const MOCK_EXERCISES: Exercise[] = [
     instructions: [
       'Lee la operación matemática en pantalla.',
       'Escribe el resultado en el cuadro de respuesta.',
-      'Resuelve tantas operaciones como puedas en el tiempo asignado.'
+      'Resuelve tantas operaciones como puedas en el tiempo asignado.',
     ],
     createdAt: '2025-01-04T10:00:00Z',
     updatedAt: '2025-01-04T10:00:00Z',
-    engine: 'mental-math'
+    engine: 'mental-math',
   },
   {
     _id: 'ex_speed_react',
@@ -80,11 +80,11 @@ const MOCK_EXERCISES: Exercise[] = [
     instructions: [
       'Mantente atento a la pantalla.',
       'Haz clic tan pronto como aparezca la señal visual o sonora.',
-      'Evita hacer clic antes de tiempo.'
+      'Evita hacer clic antes de tiempo.',
     ],
     createdAt: '2025-01-05T10:00:00Z',
     updatedAt: '2025-01-05T10:00:00Z',
-    engine: 'reaction-speed'
+    engine: 'reaction-speed',
   },
   {
     _id: 'ex_flex_cog',
@@ -96,17 +96,24 @@ const MOCK_EXERCISES: Exercise[] = [
     instructions: [
       'Observa la regla actual para clasificar los elementos.',
       'Cuando cambie la regla, adapta tu respuesta rápidamente.',
-      'Clasifica tantos elementos como puedas en el tiempo disponible.'
+      'Clasifica tantos elementos como puedas en el tiempo disponible.',
     ],
     createdAt: '2025-01-06T10:00:00Z',
     updatedAt: '2025-01-06T10:00:00Z',
-    engine: 'cognitive-flex'
-  }
+    engine: 'cognitive-flex',
+  },
 ];
 
 function normalizeExercise(e: Exercise): Exercise {
   return { ...e, instructions: e.instructions ?? [], duration: e.duration ?? 5 };
 }
+
+// Endpoints (con fallback a la versión “cognitive” por si la usas)
+const EX_LIST_PATHS = ['/api/exercises', '/api/cognitive/exercises'];
+const EX_ITEM_PATHS = (id: string) => [
+  `/api/exercises/${id}`,
+  `/api/cognitive/exercises/${id}`,
+];
 
 // ===============================
 //         EJERCICIOS (API)
@@ -114,9 +121,10 @@ function normalizeExercise(e: Exercise): Exercise {
 export async function fetchExercises(): Promise<Exercise[]> {
   if (USE_MOCK) return MOCK_EXERCISES.map(normalizeExercise);
   try {
-    const items = await getJSON<Exercise[]>(['/exercises', '/api/exercises']);
+    const items = await getJSON<Exercise[]>(EX_LIST_PATHS);
     return items.map(normalizeExercise);
   } catch (err) {
+    // fallback a mock si el backend falla
     console.warn('[fetchExercises] backend falló, usando mock:', err);
     return MOCK_EXERCISES.map(normalizeExercise);
   }
@@ -124,15 +132,15 @@ export async function fetchExercises(): Promise<Exercise[]> {
 
 export async function fetchExerciseById(id: string): Promise<Exercise> {
   if (USE_MOCK) {
-    const found = MOCK_EXERCISES.find(e => e._id === id);
+    const found = MOCK_EXERCISES.find((e) => e._id === id);
     if (!found) throw new Error(`Exercise ${id} not found (mock)`);
     return normalizeExercise(found);
   }
   try {
-    const e = await getJSON<Exercise>([`/exercises/${id}`, `/api/exercises/${id}`]);
+    const e = await getJSON<Exercise>(EX_ITEM_PATHS(id));
     return normalizeExercise(e);
   } catch (err) {
-    const fb = MOCK_EXERCISES.find(e => e._id === id);
+    const fb = MOCK_EXERCISES.find((e) => e._id === id);
     if (fb) {
       console.warn('[fetchExerciseById] backend falló, usando mock:', err);
       return normalizeExercise(fb);
@@ -151,38 +159,49 @@ export async function fetchRecentExercises(limit = 3): Promise<Exercise[]> {
 
 export async function fetchExerciseCategories(): Promise<string[]> {
   const items = await fetchExercises();
-  return Array.from(new Set(items.map(e => e.category)));
+  return Array.from(new Set(items.map((e) => e.category)));
 }
 
 // ===============================
 //       SESIONES (API)
 // ===============================
-export async function startExerciseSession(exerciseId: string): Promise<{ _id: string }> {
+export async function startExerciseSession(
+  exerciseId: string
+): Promise<{ _id: string }> {
   if (USE_MOCK) {
     return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
   }
 
-  const tries: Array<{ path: string; init?: RequestInit }> = [
-    { path: `/exercises/${exerciseId}/sessions`, init: { method: 'POST', credentials: 'include' } },
-    { path: `/api/exercises/${exerciseId}/sessions`, init: { method: 'POST', credentials: 'include' } },
-    { path: `/sessions`, init: { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exerciseId }) } },
-    { path: `/api/sessions`, init: { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exerciseId }) } },
-  ];
+  // Probamos primero el endpoint canónico, luego el “cognitive”
+  const candidates = [
+    { path: '/api/sessions', body: { exerciseId } },
+    { path: '/api/cognitive/sessions', body: { exerciseId } },
+  ] as const;
 
   let lastErr: unknown;
-  for (const t of tries) {
+  for (const c of candidates) {
     try {
-      const res = await fetch(`${API}${t.path}`, t.init);
-      if (res.ok) return await res.json();
-      lastErr = new Error(`${res.status} ${res.statusText} on ${t.path}`);
-    } catch (e) { lastErr = e; }
+      const created = await postJSON<{ _id?: string } & Record<string, unknown>>(
+        c.path,
+        c.body
+      );
+      const id = created?._id;
+      if (id) return { _id: id };
+      // si el backend devuelve todo el doc poblado, extraemos _id
+      if (typeof (created as Record<string, unknown>)._id === 'string') {
+        return { _id: (created as { _id: string })._id };
+      }
+      lastErr = new Error('Respuesta sin _id');
+    } catch (e) {
+      lastErr = e;
+    }
   }
 
+  // En dev, no rompemos el flujo
   if (process.env.NODE_ENV !== 'production') {
-    console.warn('[startExerciseSession] backend falló, usando sesión mock:', lastErr);
+    console.warn('[startExerciseSession] backend falló, sesión mock:', lastErr);
     return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
   }
-
   throw (lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? 'Cannot start session')));
 }
 
@@ -190,6 +209,7 @@ export async function completeExercise(
   sessionId: string,
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
+  // Si es mock o sesión local, devolvemos resultado local
   if (USE_MOCK || sessionId.startsWith('sess_')) {
     return {
       _id: `res_${Math.random().toString(36).slice(2, 11)}`,
@@ -201,14 +221,21 @@ export async function completeExercise(
     };
   }
 
-  const tries = [`/sessions/${sessionId}/complete`, `/api/sessions/${sessionId}/complete`];
-  for (const p of tries) {
+  const candidates = [
+    `/api/sessions/${sessionId}/complete`,
+    `/api/cognitive/sessions/${sessionId}/complete`,
+  ];
+
+  for (const p of candidates) {
     try {
       return await postJSON<ExerciseResult>(p, data);
-    } catch {}
+    } catch {
+      // probar siguiente
+    }
   }
 
-  console.warn('[completeExercise] backend no disponible, devolviendo resultado mock');
+  // Fallback blando
+  console.warn('[completeExercise] backend no disponible, resultado mock');
   return {
     _id: `res_${Math.random().toString(36).slice(2, 11)}`,
     sessionId,
@@ -220,7 +247,6 @@ export async function completeExercise(
 }
 
 export async function fetchMySessions(): Promise<ExerciseSession[]> {
-  const res = await fetch(`${API}/api/sessions`, { credentials: 'include' });
-  if (!res.ok) throw new Error('No se pudieron cargar las sesiones');
-  return res.json();
+  // Usa helper `get` para heredar Authorization
+  return get<ExerciseSession[]>('/api/sessions');
 }

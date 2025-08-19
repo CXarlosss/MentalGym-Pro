@@ -1,6 +1,6 @@
 // src/lib/api/progress.ts
 import type { UserProgress, Challenge } from '@/types';
-import { API, USE_MOCK, getJSON } from './config';
+import { USE_MOCK, getJSON } from './config';
 
 // ===============================
 //            MOCKS
@@ -28,6 +28,13 @@ export const MOCK_CHALLENGES: Challenge[] = [
   },
 ];
 
+// Header de auth tipado (evita HeadersInit union raro)
+function authHeader(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // ===============================
 //       PROGRESO DEL USUARIO
 // ===============================
@@ -35,8 +42,13 @@ export async function fetchUserProgress(): Promise<UserProgress> {
   if (USE_MOCK) return MOCK_PROGRESS;
 
   try {
-    // intenta rutas comunes y cae a mock si falla
-    return await getJSON<UserProgress>(['/stats/me', '/api/stats/me']);
+    const paths = [
+      '/stats/me',
+      '/api/stats/me',
+      // si más adelante expones uno específico de gamificación:
+      // '/api/gamification/progress/me',
+    ];
+    return await getJSON<UserProgress>(paths, { headers: authHeader() });
   } catch (e) {
     console.warn('[fetchUserProgress] backend falló, usando mock:', e);
     return MOCK_PROGRESS;
@@ -49,15 +61,16 @@ export async function fetchUserProgress(): Promise<UserProgress> {
 export async function fetchActiveChallenges(): Promise<Challenge[]> {
   if (USE_MOCK) return MOCK_CHALLENGES;
 
-  const tryGet = async (p: string) =>
-    fetch(`${API}${p}`, { credentials: 'include' });
-
   try {
-    let res = await tryGet('/challenges/active');
-    if (!res.ok) res = await tryGet('/api/challenges/active');
-    if (!res.ok) throw new Error('No se pudieron cargar los desafíos activos');
-
-    return (await res.json()) as Challenge[];
+    const paths = [
+      // nuevo namespace
+      '/api/gamification/challenges/active',
+      // compat que dejaste en el backend
+      '/api/challenges/active',
+      // por si el front antiguo llamaba sin /api
+      '/challenges/active',
+    ];
+    return await getJSON<Challenge[]>(paths, { headers: authHeader() });
   } catch (e) {
     console.warn('[fetchActiveChallenges] backend falló, usando mock:', e);
     return MOCK_CHALLENGES;

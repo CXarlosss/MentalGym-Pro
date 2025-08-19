@@ -1,4 +1,4 @@
-import express from "express";
+/* import express from "express";
 import {
   getPublicRoutines,
   getRoutineById,
@@ -20,3 +20,4 @@ router.put("/:id", protect, updateRoutine);
 router.delete("/:id", protect, deleteRoutine);
 
 export default router;
+ */
