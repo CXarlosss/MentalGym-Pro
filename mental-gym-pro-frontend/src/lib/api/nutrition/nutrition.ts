@@ -1,7 +1,7 @@
-// src/lib/api/nutrition.ts (o src/lib/api/nutrition/nutrition.ts)
-import { USE_MOCK } from '../config';
-import * as Api from './nutrition.api';
-import * as Local from './nutrition.local';
+// src/lib/api/nutrition/nutrition.ts
+import { USE_MOCK } from '../config'
+import * as Api from './nutrition.api'
+import * as Local from './nutrition.local'
 import type {
   FoodItem,
   MealEntry,
@@ -9,140 +9,147 @@ import type {
   DailyNutrition,
   WeeklyNutritionSummary,
   NutritionTargets,
-} from '@/types';
+  FoodFavorite,
+} from '@/types'
 
-// ---------- Foods ----------
+// ===============================
+// Foods
+// ===============================
 export const listFoods = USE_MOCK
   ? async (q?: string): Promise<FoodItem[]> => {
-      const all = Local.getFoodDb();
-      if (!q) return all;
-      const s = q.toLowerCase();
+      const all = Local.getFoodDb()
+      if (!q) return all
+      const s = q.toLowerCase()
       return all.filter(
-        (f) =>
+        f =>
           f.name.toLowerCase().includes(s) ||
-          (f.tags || []).some((t) => t.toLowerCase().includes(s)),
-      );
+          (f.tags || []).some(t => t.toLowerCase().includes(s)),
+      )
     }
-  : Api.listFoods;
+  : Api.listFoods
 
 export const getFoodById = USE_MOCK
   ? async (id: string): Promise<FoodItem> => {
-      const found = Local.getFoodDb().find((f) => f._id === id);
-      if (!found) throw new Error('Alimento no encontrado (local)');
-      return found;
+      const found = Local.getFoodDb().find(f => f._id === id)
+      if (!found) throw new Error('Alimento no encontrado (local)')
+      return found
     }
-  : Api.getFoodById;
+  : Api.getFoodById
 
 export const createFood = USE_MOCK
   ? async (body: Omit<FoodItem, '_id'>): Promise<FoodItem> => {
-      return Local.addFoodToDb(body);
+      return Local.addFoodToDb(body)
     }
-  : Api.createFood;
+  : Api.createFood
 
 export const updateFood = USE_MOCK
   ? async (id: string, patch: Partial<FoodItem>): Promise<FoodItem> => {
-      const list = Local.getFoodDb();
-      const idx = list.findIndex((f) => f._id === id);
-      if (idx === -1) throw new Error('Alimento no encontrado (local)');
-      const merged: FoodItem = { ...list[idx], ...patch };
-      // Nota: en mock no persistimos el update (solo devolvemos el merge)
-      return merged;
+      const list = Local.getFoodDb()
+      const idx = list.findIndex(f => f._id === id)
+      if (idx === -1) throw new Error('Alimento no encontrado (local)')
+      const merged: FoodItem = { ...list[idx], ...patch }
+      // en mock no persistimos realmente
+      return merged
     }
-  : Api.updateFood;
+  : Api.updateFood
 
 export const deleteFood = USE_MOCK
-  ? async (id: string): Promise<{ ok: boolean }> => {
-      // En mock no borramos de LS; marcamos el arg como usado:
-      void id;
-      return { ok: true };
-    }
-  : Api.deleteFood;
+  ? async (_id: string): Promise<{ ok: boolean }> => ({ ok: true })
+  : Api.deleteFood
 
-// ---------- Meals ----------
-export const listMeals = USE_MOCK
-  ? async (params?: {
-      day?: string;
-      from?: string;
-      to?: string;
-    }): Promise<MealEntry[]> => {
-      const today = Local.getTodayNutrition();
-      if (params?.day && params.day === today.date) return today.meals;
-      return today.meals; // simplificado en mock
-    }
-  : Api.listMeals;
+// Helpers locales de Food DB (útiles en mock o para demo)
+// Los exportamos siempre; si usas backend, simplemente no los llames.
+export const seedFoodDbOnce = Local.seedFoodDbOnce
+export const getFoodDb = Local.getFoodDb
+export const addFoodToDb = Local.addFoodToDb
 
-export const createMeal = USE_MOCK
-  ? async (body: {
-      type: MealType;
-      foodName: string;
-      amount: number;
-    }): Promise<MealEntry> => {
-      return Local.addMealToday({
-        type: body.type,
-        foodName: body.foodName,
-        amount: body.amount,
-      });
-    }
-  : Api.createMeal;
+// Favoritos (solo local)
+export const getFavoritesFoods = (): FoodFavorite[] => Local.getFavoritesFoods()
+export const toggleFavoriteFood = (name: string): FoodFavorite[] =>
+  Local.toggleFavoriteFood(name)
 
-export const updateMeal = USE_MOCK
-  ? async (
-      id: string,
-      patch: Partial<MealEntry> & { foodId?: string; amount?: number },
-    ): Promise<MealEntry> => {
-      // No implementado en mock; marcamos args como usados para ESLint:
-      void id;
-      void patch;
-      throw new Error('No implementado en mock');
-    }
-  : Api.updateMeal;
+// ===============================
+// Meals
+// ===============================
+export const listMeals = USE_MOCK ? Local.listMeals : Api.listMeals
 
-export const deleteMeal = USE_MOCK
-  ? async (id: string): Promise<{ ok: boolean }> => {
-      void id;
-      return { ok: true };
+// ⚠️ Unifica "añadir comida del día":
+// - En mock: Local.addMealToday
+// - En API: usamos createMeal con { type, foodName, amount }
+export const addMealToday = USE_MOCK
+  ? Local.addMealToday
+  : async (input: { type: MealType; foodName: string; amount: number }): Promise<MealEntry> => {
+      if (!input.foodName) throw new Error('foodName requerido')
+      if (!input.amount || input.amount <= 0) throw new Error('amount inválido')
+      return Api.createMeal({
+        type: input.type,
+        foodName: input.foodName,
+        amount: input.amount,
+      })
     }
-  : Api.deleteMeal;
 
-// ---------- Summaries ----------
+// Agua: en mock actualizamos LS; en backend no hay endpoint -> usamos fallback local
+export const addWaterToday = async (ml: number): Promise<number> => {
+  if (USE_MOCK) return Local.addWaterToday(ml)
+  // Si algún día tienes endpoint, cámbialo aquí.
+  // Por ahora, mantenemos un fallback local para que la UI funcione.
+  return Local.addWaterToday(ml)
+}
+
+// ===============================
+// Summaries (diario/semana)
+// ===============================
 export const getDailySummary = USE_MOCK
   ? async (day?: string): Promise<DailyNutrition> => {
-      const d = Local.getTodayNutrition();
+      const d = Local.getTodayNutrition()
       if (day && day !== d.date) {
-        return {
-          date: day,
-          kcal: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          waterMl: 0,
-          meals: [],
-        };
+        return { date: day, kcal: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0, meals: [] }
       }
-      return d;
+      return d
     }
-  : Api.getDailySummary;
+  : Api.getDailySummary
 
 export const getWeekSummary = USE_MOCK
   ? async (): Promise<WeeklyNutritionSummary> => Local.getWeekNutrition()
-  : Api.getWeekSummary;
+  : Api.getWeekSummary
 
-// ---------- Targets ----------
-// ---------- Targets ----------
-export const getMyTargets = USE_MOCK
-  ? async (): Promise<NutritionTargets> => Local.getNutritionTargets()
-  : Api.getMyTargets;
+// Aliases cómodos usados por tu UI:
+export const getTodayNutrition = async (): Promise<DailyNutrition> => {
+  if (USE_MOCK) return Local.getTodayNutrition()
+  return Api.getDailySummary()
+}
 
-export const upsertMyTargets = USE_MOCK
-  ? async (patch: Partial<NutritionTargets>): Promise<NutritionTargets> =>
-      Local.setNutritionTargets(patch)
-  : Api.upsertMyTargets;
+// Alias "tipo local" para semana (misma forma de datos que WeeklyNutritionSummary)
+export const getWeekNutrition = async (): Promise<WeeklyNutritionSummary> => {
+  if (USE_MOCK) return Local.getWeekNutrition()
+  return Api.getWeekSummary()
+}
 
-// ---------- Helpers locales opcionales ----------
-export {
-  seedFoodDbOnce,
-  getFoodDb,
-  addFoodToDb,
-  getFavoritesFoods,
-  toggleFavoriteFood,
-} from './nutrition.local';
+// ===============================
+// Targets (objetivos)
+// ===============================
+async function _getNutritionTargetsImpl(): Promise<NutritionTargets> {
+  if (USE_MOCK) return Local.getNutritionTargets()
+  try {
+    return await Api.getMyTargets()
+  } catch {
+    // fallback local si la API falla
+    return Local.getNutritionTargets()
+  }
+}
+
+async function _setNutritionTargetsImpl(
+  patch: Partial<NutritionTargets>,
+): Promise<NutritionTargets> {
+  if (USE_MOCK) return Local.setNutritionTargets(patch)
+  try {
+    return await Api.upsertMyTargets(patch)
+  } catch {
+    return Local.setNutritionTargets(patch)
+  }
+}
+
+export const getNutritionTargets = _getNutritionTargetsImpl
+export const setNutritionTargets = _setNutritionTargetsImpl
+export { getNutritionTargets as getMyTargets }
+export { setNutritionTargets as upsertMyTargets }

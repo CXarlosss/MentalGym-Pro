@@ -9,7 +9,7 @@ import {
   getFavoriteExercises,
   addGymSetToday, getGymWeeklySummary, getGroupVolumeThisWeek,
   epley1RM, brzycki1RM, targetFromPercent1RM
-} from '@/lib/api/fitness.local'
+} from '@/lib/api/fitness/fitness'
 import type { LiftTag } from '@/types'
 
 // Timer mejorado con animaciones

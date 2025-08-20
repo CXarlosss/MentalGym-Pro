@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { fetchExerciseById, startExerciseSession, completeExercise } from '@/lib/api/'
+import { fetchExercise, startExerciseSession, completeExercise } from '@/lib/api/cognitive/exercises'
 import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
 import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
 // ❌ import antiguo:
@@ -45,7 +45,7 @@ export default function RetoMentalDetailPage() {
     try {
       setLoading(true)
       setError(null)
-      const data = await withRetry(() => fetchExerciseById(id), 3, 300)
+      const data = await withRetry(() => fetchExercise(id), 3, 300)
       setExercise(data)
     } catch (e) {
       console.error(e)

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { fetchExercises, fetchExerciseCategories } from '@/lib/api/exercises'
+import { fetchExercises, fetchExerciseCategories } from '@/lib/api/cognitive/exercises'
 import ExerciseCard from '@/components/cards/ExerciseCard'
 import FilterPanel from '@/components/exercises/FilterPanel'
 import SearchHeader from '@/components/exercises/SearchHeader'
@@ -41,7 +41,7 @@ export default function RetosMentalesPage() {
   const [hasMore, setHasMore] = useState(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
-  // Carga inicial
+    // Carga inicial
   useEffect(() => {
     async function load() {
       try {
@@ -50,7 +50,10 @@ export default function RetosMentalesPage() {
           fetchExercises(),
           fetchExerciseCategories(),
         ])
-        setExercises(exData)
+
+        // ⬇️ Normaliza: si viene paginado usa .items; si es array, úsalo tal cual
+        const list = Array.isArray(exData) ? exData : exData.items
+        setExercises(list)
         setCategories(catData)
       } catch (e) {
         console.error(e)
@@ -61,6 +64,7 @@ export default function RetosMentalesPage() {
     }
     if (user) load()
   }, [user])
+
 
   // Filtros + orden
   const filtered = useMemo(() => {
