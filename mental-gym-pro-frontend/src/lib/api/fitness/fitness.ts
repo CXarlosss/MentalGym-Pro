@@ -1,5 +1,5 @@
 // src/lib/api/fitness.ts
-import { USE_MOCK } from './config';
+import { USE_MOCK } from '../config';
 import * as Api from './fitness.api';
 import * as Local from './fitness.local';
 

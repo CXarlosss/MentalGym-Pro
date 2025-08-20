@@ -8,7 +8,7 @@ import type {
   LiftSet,
   CardioEntry,
 } from '@/types';
-import { API } from './config';
+import { API } from '../config';
 
 /** Devuelve headers siempre válidos para fetch, añadiendo Authorization si hay token */
 function withAuth(headers?: HeadersInit): HeadersInit {
@@ -88,7 +88,7 @@ export async function upsertTodayActivity(input: {
 }
 
 export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
-  const res = await fetch(`${API}/api/fitness/activity/weekly-summary`, {
+  const res = await fetch(`${API}/api/fitness/activity/week`, { // <- antes: /weekly-summary
     credentials: 'include',
     headers: withAuth(),
   });

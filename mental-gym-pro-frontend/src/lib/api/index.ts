@@ -5,7 +5,8 @@ import { USE_MOCK } from './config';
 export * from './config';
 export * from './exercises';
 export * from './progress';
-import * as UserApi from './user.api';           // 👈 añade esto
+import * as UserApi from './user.api';   
+export * from './gamification/gamification'; 
 
 // ====== FITNESS: API con fallback a LOCAL ======
 import * as FitLocal from './fitness.local';

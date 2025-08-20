@@ -39,3 +39,41 @@ export const createSession = async (req, res) => {
     res.status(500).json({ message: 'Error al crear sesión', error });
   }
 };
+
+// POST /api/cognitive/sessions/:sessionId/complete
+export const completeSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { score = 0, timeSpent = 0, metadata = {} } = req.body || {};
+
+    const updated = await ExerciseSession.findOneAndUpdate(
+      { _id: sessionId, user: req.user._id },
+      {
+        $set: {
+          score: Number(score) || 0,
+          timeSpentSec: Number(timeSpent) || 0,
+          metadata,
+          completedAt: new Date(),
+        },
+      },
+      { new: true }
+    ).populate('exercise', 'title category difficulty');
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Sesión no encontrada' });
+    }
+
+    // Respuesta compatible con el front
+    return res.json({
+      _id: updated._id,
+      sessionId: updated._id,
+      score: updated.score ?? 0,
+      timeSpent: updated.timeSpentSec ?? 0,
+      createdAt: updated.completedAt ?? updated.playedAt,
+      metadata: updated.metadata ?? {},
+    });
+  } catch (error) {
+    console.error('[cog.completeSession]', error);
+    res.status(500).json({ message: 'Error al completar sesión', error });
+  }
+};

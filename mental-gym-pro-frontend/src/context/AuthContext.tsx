@@ -3,7 +3,7 @@ import { createContext, useContext, ReactNode, useState, useEffect } from 'react
 import { useRouter } from 'next/navigation'
 import { registerUser, loginUser, logoutUser, getCurrentUser } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
-import { updateUserProfile } from '@/lib/api/user.api'
+import { updateUserProfile } from '@/lib/api/user/user.api'
 import type { User } from '@/types' // ✅ Importa el tipo User del archivo de tipos global
 import { clearLegacyLocalData, clearUserScopedData } from '@/lib/api/'; 
 

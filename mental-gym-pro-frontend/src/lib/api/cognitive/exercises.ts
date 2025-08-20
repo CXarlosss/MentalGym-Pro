@@ -1,6 +1,6 @@
 // src/lib/api/exercises.ts
 import type { Exercise, ExerciseResult, ExerciseSession } from '@/types';
-import { USE_MOCK, getJSON, postJSON, get } from './config';
+import { USE_MOCK, getJSON, postJSON, get } from '../config';
 
 // ===============================
 //      MOCKS + NORMALIZADOR
@@ -8,6 +8,7 @@ import { USE_MOCK, getJSON, postJSON, get } from './config';
 const MOCK_EXERCISES: Exercise[] = [
   {
     _id: 'ex_mem_pairs',
+    slug: 'memoria-de-pares',
     title: 'Memoria de pares',
     description: 'Encuentra todas las parejas de cartas iguales lo más rápido posible.',
     category: 'memoria',
@@ -24,6 +25,7 @@ const MOCK_EXERCISES: Exercise[] = [
   },
   {
     _id: 'ex_logic_seq',
+    slug: 'secuencias-logicas',
     title: 'Secuencias lógicas',
     description: 'Identifica el patrón y completa la secuencia correctamente.',
     category: 'logica',
@@ -40,6 +42,7 @@ const MOCK_EXERCISES: Exercise[] = [
   },
   {
     _id: 'ex_attention_sel',
+    slug: 'atencion-selectiva',
     title: 'Atención selectiva',
     description: 'Encuentra el elemento objetivo entre múltiples distractores.',
     category: 'atencion',
@@ -56,6 +59,7 @@ const MOCK_EXERCISES: Exercise[] = [
   },
   {
     _id: 'ex_calc_fast',
+    slug: 'calculo-rapido',
     title: 'Cálculo rápido',
     description: 'Resuelve operaciones matemáticas lo más rápido posible.',
     category: 'calculo',
@@ -72,6 +76,7 @@ const MOCK_EXERCISES: Exercise[] = [
   },
   {
     _id: 'ex_speed_react',
+    slug: 'velocidad-de-reaccion',
     title: 'Velocidad de reacción',
     description: 'Haz clic lo más rápido posible cuando aparezca la señal.',
     category: 'velocidad',
@@ -88,6 +93,7 @@ const MOCK_EXERCISES: Exercise[] = [
   },
   {
     _id: 'ex_flex_cog',
+    slug: 'flexibilidad-cognitiva',
     title: 'Flexibilidad cognitiva',
     description: 'Cambia entre diferentes reglas de clasificación lo más rápido posible.',
     category: 'flexibilidad',
@@ -105,44 +111,102 @@ const MOCK_EXERCISES: Exercise[] = [
 ];
 
 function normalizeExercise(e: Exercise): Exercise {
-  return { ...e, instructions: e.instructions ?? [], duration: e.duration ?? 5 };
+  const now = new Date().toISOString();
+  return {
+    ...e,
+    instructions: e.instructions ?? [],
+    duration: e.duration ?? 5,
+    createdAt: e.createdAt ?? now,
+    updatedAt: e.updatedAt ?? e.createdAt ?? now,
+  };
 }
 
 // Endpoints (con fallback a la versión “cognitive” por si la usas)
 const EX_LIST_PATHS = ['/api/exercises', '/api/cognitive/exercises'];
-const EX_ITEM_PATHS = (id: string) => [
-  `/api/exercises/${id}`,
-  `/api/cognitive/exercises/${id}`,
+const EX_ITEM_PATHS = (idOrSlug: string) => [
+  `/api/exercises/${idOrSlug}`,
+  `/api/cognitive/exercises/${idOrSlug}`,
 ];
+
+// ===============================
+//        Tipos locales (opcional)
+// ===============================
+// Si en "@/types" aún no tienes unions y slug, añádelos.
+// export type ExerciseCategory = 'memoria'|'logica'|'atencion'|'calculo'|'velocidad'|'flexibilidad';
+// export type ExerciseDifficulty = 'easy'|'medium'|'hard';
+// export type ExerciseEngine = 'reaction-speed'|'memory-pairs'|'logic-seq'|'attention-selective'|'mental-math'|'cognitive-flex';
+// export type Exercise = { _id: string; slug?: string; title: string; description: string; category: ExerciseCategory; difficulty: ExerciseDifficulty; duration: number; instructions: string[]; engine: ExerciseEngine; icon?: string; createdAt: string; updatedAt: string; };
 
 // ===============================
 //         EJERCICIOS (API)
 // ===============================
-export async function fetchExercises(): Promise<Exercise[]> {
-  if (USE_MOCK) return MOCK_EXERCISES.map(normalizeExercise);
+export type ExFilters = {
+  page?: number;
+  limit?: number;
+  category?: Exercise['category'];
+  difficulty?: Exercise['difficulty'];
+  q?: string;
+};
+
+// Devuelve array (legacy) o {items,total,...} si el backend lo soporta
+export async function fetchExercises(
+  filters: ExFilters = {}
+): Promise<Exercise[] | { items: Exercise[]; total: number; page: number; limit: number }> {
+  if (USE_MOCK) {
+    const list = MOCK_EXERCISES.map(normalizeExercise);
+    if (!Object.keys(filters).length) return list;
+    const { category, difficulty, q } = filters;
+    return list.filter(
+      (e) =>
+        (!category || e.category === category) &&
+        (!difficulty || e.difficulty === difficulty) &&
+        (!q || e.title.toLowerCase().includes(q.toLowerCase()))
+    );
+  }
+
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== undefined && v !== null) params.set(k, String(v));
+  }
+  const paths = EX_LIST_PATHS.map((p) => (params.size ? `${p}?${params}` : p));
+
   try {
-    const items = await getJSON<Exercise[]>(EX_LIST_PATHS);
-    return items.map(normalizeExercise);
+    const res = await getJSON<any>(paths);
+    const items: Exercise[] = Array.isArray(res) ? res : res.items;
+    const normalized = items.map(normalizeExercise);
+    return Array.isArray(res)
+      ? normalized
+      : {
+          ...res,
+          items: normalized,
+          total: Number(res.total ?? normalized.length),
+          page: Number(res.page ?? 1),
+          limit: Number(res.limit ?? normalized.length),
+        };
   } catch (err) {
-    // fallback a mock si el backend falla
     console.warn('[fetchExercises] backend falló, usando mock:', err);
     return MOCK_EXERCISES.map(normalizeExercise);
   }
 }
 
-export async function fetchExerciseById(id: string): Promise<Exercise> {
+// ✅ Ahora acepta id **o** slug
+export async function fetchExercise(idOrSlug: string): Promise<Exercise> {
   if (USE_MOCK) {
-    const found = MOCK_EXERCISES.find((e) => e._id === id);
-    if (!found) throw new Error(`Exercise ${id} not found (mock)`);
+    const found = MOCK_EXERCISES.find(
+      (e) => e._id === idOrSlug || e.slug === idOrSlug
+    );
+    if (!found) throw new Error(`Exercise ${idOrSlug} not found (mock)`);
     return normalizeExercise(found);
   }
   try {
-    const e = await getJSON<Exercise>(EX_ITEM_PATHS(id));
+    const e = await getJSON<Exercise>(EX_ITEM_PATHS(idOrSlug));
     return normalizeExercise(e);
   } catch (err) {
-    const fb = MOCK_EXERCISES.find((e) => e._id === id);
+    const fb = MOCK_EXERCISES.find(
+      (e) => e._id === idOrSlug || e.slug === idOrSlug
+    );
     if (fb) {
-      console.warn('[fetchExerciseById] backend falló, usando mock:', err);
+      console.warn('[fetchExercise] backend falló, usando mock:', err);
       return normalizeExercise(fb);
     }
     throw err;
@@ -150,15 +214,23 @@ export async function fetchExerciseById(id: string): Promise<Exercise> {
 }
 
 export async function fetchRecentExercises(limit = 3): Promise<Exercise[]> {
-  const items = await fetchExercises();
-  return items
+  // intenta pedir ya limit al backend
+  const res = await fetchExercises({ limit });
+  const items = Array.isArray(res) ? res : res.items;
+  if (items?.length) return items.map(normalizeExercise);
+
+  // fallback local
+  const all = await fetchExercises();
+  const list = Array.isArray(all) ? all : all.items;
+  return list
     .slice()
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
     .slice(0, limit);
 }
 
 export async function fetchExerciseCategories(): Promise<string[]> {
-  const items = await fetchExercises();
+  const res = await fetchExercises();
+  const items = Array.isArray(res) ? res : res.items;
   return Array.from(new Set(items.map((e) => e.category)));
 }
 
@@ -172,7 +244,6 @@ export async function startExerciseSession(
     return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
   }
 
-  // Probamos primero el endpoint canónico, luego el “cognitive”
   const candidates = [
     { path: '/api/sessions', body: { exerciseId } },
     { path: '/api/cognitive/sessions', body: { exerciseId } },
@@ -186,18 +257,13 @@ export async function startExerciseSession(
         c.body
       );
       const id = created?._id;
-      if (id) return { _id: id };
-      // si el backend devuelve todo el doc poblado, extraemos _id
-      if (typeof (created as Record<string, unknown>)._id === 'string') {
-        return { _id: (created as { _id: string })._id };
-      }
+      if (typeof id === 'string' && id) return { _id: id };
       lastErr = new Error('Respuesta sin _id');
     } catch (e) {
       lastErr = e;
     }
   }
 
-  // En dev, no rompemos el flujo
   if (process.env.NODE_ENV !== 'production') {
     console.warn('[startExerciseSession] backend falló, sesión mock:', lastErr);
     return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
@@ -209,7 +275,6 @@ export async function completeExercise(
   sessionId: string,
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
-  // Si es mock o sesión local, devolvemos resultado local
   if (USE_MOCK || sessionId.startsWith('sess_')) {
     return {
       _id: `res_${Math.random().toString(36).slice(2, 11)}`,
@@ -234,7 +299,6 @@ export async function completeExercise(
     }
   }
 
-  // Fallback blando
   console.warn('[completeExercise] backend no disponible, resultado mock');
   return {
     _id: `res_${Math.random().toString(36).slice(2, 11)}`,
