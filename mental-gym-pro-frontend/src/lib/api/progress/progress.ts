@@ -1,6 +1,6 @@
 // src/lib/api/progress.ts
 import type { UserProgress, Challenge } from '@/types';
-import { USE_MOCK, getJSON } from './config';
+import { USE_MOCK, getJSON } from '../config';
 
 // ===============================
 //            MOCKS

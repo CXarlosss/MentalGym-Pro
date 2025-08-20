@@ -197,3 +197,6 @@ export const putJSON = <T>(path: string, body?: unknown, init?: RequestInit) =>
 
 export const delJSON = <T>(path: string, init?: RequestInit) =>
   apiFetch<T>(path, { method: 'DELETE', ...(init || {}) });
+
+export const del = <T>(path: string, init?: RequestInit) =>
+  apiFetch<T>(path, { method: 'DELETE', ...(init || {}) });

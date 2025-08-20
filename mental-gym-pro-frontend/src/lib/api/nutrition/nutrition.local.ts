@@ -3,7 +3,7 @@ import type {
   FoodItem, MealEntry, MealType,
   DailyNutrition, NutritionTargets, WeeklyNutritionSummary, FoodFavorite
 } from '@/types';
-import { LS_KEYS, toLocalYMD, scopedLSKey } from './config';
+import { LS_KEYS, toLocalYMD, scopedLSKey } from '../config';
 
 
 // ---------------- Utils LocalStorage ----------------

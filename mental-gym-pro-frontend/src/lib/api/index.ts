@@ -3,8 +3,8 @@ import { USE_MOCK } from './config';
 
 // Resto de módulos "puros" (no necesitan fallback especial)
 export * from './config';
-export * from './exercises';
-export * from './progress';
+export * from './cognitive/exercises';
+export * from './progress/progress';
 import * as UserApi from './user.api';   
 export * from './gamification/gamification'; 
 

@@ -1,96 +1,47 @@
 // src/lib/api/gamification.ts
-import { api } from '../config';
-
-// ===== Tipos (opcionales, bórralos si ya los tienes en "@/types") =====
-export type Challenge = {
-  _id: string;
-  title: string;
-  description?: string;
-  objective?: string;
-  durationDays?: number | null;
-  exercises: string[];
-  expiresAt?: string;
-  participants: number;
-  isCompleted: boolean;
-  isDeleted?: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type UserChallenge = {
-  _id: string;
-  user: string;
-  challenge: Challenge; // viene populado en algunos endpoints
-  progress: number;
-  isCompleted: boolean;
-  joinedAt: string;
-  completedAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type Badge = {
-  _id: string;
-  code: string;
-  title: string;
-  description?: string;
-  icon?: string;
-  isDeleted?: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type UserBadge = {
-  _id: string;
-  user: string;
-  badge: Badge; // populado
-  unlockedAt: string;
-};
+import type { Challenge, UserChallenge, Badge, UserBadge } from '@/types';
+import { get, postJSON, patchJSON, del, getJSON } from '../config';
 
 // =====================
 //     Challenges
 // =====================
 
-// Catálogo público activo
+// Catálogo público activo (con fallback a la ruta compat)
 export async function fetchActiveChallenges() {
-  const { data } = await api.get('/gamification/challenges/active');
-  return data as Challenge[];
+  const data = await getJSON<Challenge[]>(
+    ['/api/gamification/challenges/active', '/api/challenges/active']
+  );
+  return data;
 }
 
 // Todos los desafíos (admin o sección interna)
 export async function fetchAllChallenges() {
-  const { data } = await api.get('/gamification/challenges');
-  return data as Challenge[];
+  return get<Challenge[]>('/api/gamification/challenges');
 }
 
 // Desafío por id
 export async function fetchChallengeById(id: string) {
-  const { data } = await api.get(`/gamification/challenges/${id}`);
-  return data as Challenge;
+  return get<Challenge>(`/api/gamification/challenges/${id}`);
 }
 
 // Crear desafío (admin)
 export async function createChallenge(body: Partial<Challenge>) {
-  const { data } = await api.post('/gamification/challenges', body);
-  return data as Challenge;
+  return postJSON<Challenge>('/api/gamification/challenges', body);
 }
 
 // Actualizar desafío (admin)
 export async function updateChallenge(id: string, body: Partial<Challenge>) {
-  const { data } = await api.patch(`/gamification/challenges/${id}`, body);
-  return data as Challenge;
+  return patchJSON<Challenge>(`/api/gamification/challenges/${id}`, body);
 }
 
 // Borrado lógico (admin)
 export async function deleteChallenge(id: string) {
-  const { data } = await api.delete(`/gamification/challenges/${id}`);
-  return data as { ok: boolean };
+  return del<{ ok: boolean }>(`/api/gamification/challenges/${id}`);
 }
 
 // Unirse a un desafío
 export async function joinChallenge(id: string) {
-  const { data } = await api.post(`/gamification/challenges/${id}/join`);
-  return data as UserChallenge;
+  return postJSON<UserChallenge>(`/api/gamification/challenges/${id}/join`, {});
 }
 
 // Mi progreso en un desafío
@@ -98,14 +49,12 @@ export async function updateMyChallengeProgress(
   id: string,
   body: { progress?: number; isCompleted?: boolean }
 ) {
-  const { data } = await api.patch(`/gamification/challenges/${id}/progress`, body);
-  return data as UserChallenge;
+  return patchJSON<UserChallenge>(`/api/gamification/challenges/${id}/progress`, body);
 }
 
 // Mis desafíos
 export async function fetchMyChallenges() {
-  const { data } = await api.get('/gamification/my-challenges');
-  return data as UserChallenge[];
+  return get<UserChallenge[]>('/api/gamification/my-challenges');
 }
 
 // =====================
@@ -114,36 +63,30 @@ export async function fetchMyChallenges() {
 
 // Catálogo
 export async function fetchBadges() {
-  const { data } = await api.get('/gamification/badges');
-  return data as Badge[];
+  return get<Badge[]>('/api/gamification/badges');
 }
 
 // Crear badge (admin)
 export async function createBadge(body: Pick<Badge, 'code' | 'title'> & Partial<Badge>) {
-  const { data } = await api.post('/gamification/badges', body);
-  return data as Badge;
+  return postJSON<Badge>('/api/gamification/badges', body);
 }
 
 // Actualizar badge (admin)
 export async function updateBadge(id: string, body: Partial<Badge>) {
-  const { data } = await api.patch(`/gamification/badges/${id}`, body);
-  return data as Badge;
+  return patchJSON<Badge>(`/api/gamification/badges/${id}`, body);
 }
 
 // Borrado lógico badge (admin)
 export async function deleteBadge(id: string) {
-  const { data } = await api.delete(`/gamification/badges/${id}`);
-  return data as { ok: boolean };
+  return del<{ ok: boolean }>(`/api/gamification/badges/${id}`);
 }
 
 // Mis badges
 export async function fetchMyBadges() {
-  const { data } = await api.get('/gamification/user-badges');
-  return data as UserBadge[];
+  return get<UserBadge[]>('/api/gamification/user-badges');
 }
 
 // 🔓 Desbloquear un badge para mí
 export async function unlockBadgeForMe(badgeId: string) {
-  const { data } = await api.post(`/gamification/user-badges/${badgeId}/unlock`);
-  return data as UserBadge;
+  return postJSON<UserBadge>(`/api/gamification/user-badges/${badgeId}/unlock`, {});
 }

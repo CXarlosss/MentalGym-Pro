@@ -14,7 +14,7 @@ import type {
   User,
 } from '@/types';
 
-import { LS_KEYS, toLocalYMD, todayKey, scopedLSKey } from './config';
+import { LS_KEYS, toLocalYMD, todayKey, scopedLSKey } from '../config';
 
 // ===============================
 //      Utils LocalStorage
