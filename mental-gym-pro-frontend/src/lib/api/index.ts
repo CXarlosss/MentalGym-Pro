@@ -28,3 +28,6 @@ export * from './fitness/fitness'; // aquí deben estar getWeeklyActivity, etc.
 
 // ----- Nutrición -----
 export * from './nutrition/nutrition';
+
+// ----- User -----
+export * from './user/user.api'

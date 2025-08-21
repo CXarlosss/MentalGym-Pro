@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { changePasswordMock, getGoals, setGoals, getNutritionTargets, setNutritionTargets } from '@/lib/api/'
+import { changePassword, getGoals, setGoals, getNutritionTargets, setNutritionTargets } from '@/lib/api/'
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -27,26 +28,37 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string>('')
 
-  useEffect(() => {
-    if (!user && !loading) {
-      router.replace('/login')
-      return
+  // ✅ useEffect: usa una IIFE async para poder await
+useEffect(() => {
+  if (!user && !loading) {
+    router.replace('/login')
+    return
+  }
+  if (user) {
+    setName(user.name || '')
+    setEmail(user.email || '')
+    setAvatar(user.avatar || '')
+
+    try {
+      const g = getGoals()
+      if (typeof g.dailySteps === 'number') setDailySteps(g.dailySteps)
+      if (typeof g.weeklySessions === 'number') setWeeklySessions(g.weeklySessions)
+    } catch {
+      // defaults
     }
-    if (user) {
-      setName(user.name || '')
-      setEmail(user.email || '')
-      setAvatar(user.avatar || '')
+
+    // 👇 cargar targets de nutrición de forma asíncrona
+    ;(async () => {
       try {
-        const g = getGoals()
-        if (typeof g.dailySteps === 'number') setDailySteps(g.dailySteps)
-        if (typeof g.weeklySessions === 'number') setWeeklySessions(g.weeklySessions)
-        const t = getNutritionTargets()
+        const t = await getNutritionTargets()
         if (typeof t.waterMl === 'number') setWaterMl(t.waterMl)
       } catch {
-        // defaults
+        // deja el default si falla
       }
-    }
-  }, [user, loading, router])
+    })()
+  }
+}, [user, loading, router])
+
 
   async function handleSaveProfile() {
     try {
@@ -76,28 +88,21 @@ export default function ProfilePage() {
   }
 
   async function handleChangePassword() {
-    try {
-      setSaving(true)
-      setMsg('')
-      await changePasswordMock(currPass, newPass)
-      setCurrPass(''); setNewPass('')
-      setMsg('Contraseña actualizada.')
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'No se pudo cambiar la contraseña')
-    } finally {
-      setSaving(false)
-    }
+  try {
+    setSaving(true)
+    setMsg('')
+    // ❌ Antes: await changePassword(currPass, newPass)
+    // ✅ Ahora:
+    await changePassword({ currentPassword: currPass, newPassword: newPass })
+    setCurrPass(''); setNewPass('')
+    setMsg('Contraseña actualizada.')
+  } catch (e) {
+    setMsg(e instanceof Error ? e.message : 'No se pudo cambiar la contraseña')
+  } finally {
+    setSaving(false)
   }
-
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen bg-gray-50 grid place-items-center p-8">
-        <div className="text-gray-600">Cargando…</div>
-      </div>
-    )
-  }
-
-  return (
+}
+return (
     <main className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Header */}

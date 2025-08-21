@@ -167,3 +167,35 @@ export function toggleFavoriteFood(name: string) {
   writeJSON(FAVS_KEY, favs);
   return favs;
 }
+// ===============================
+//       Meals (consulta local)
+// ===============================
+export function listMeals(params?: { day?: string; from?: string; to?: string }): MealEntry[] {
+  const map = readJSON<Record<string, DailyNutrition>>(DAY_KEY, {})
+  const res: MealEntry[] = []
+
+  const pushDay = (key: string) => {
+    const d = map[key]
+    if (!d) return
+    res.push(...(d.meals || []))
+  }
+
+  if (params?.day) {
+    pushDay(params.day)
+    return res
+  }
+
+  if (params?.from && params?.to) {
+    const from = new Date(params.from)
+    const to = new Date(params.to)
+    // incluye ambos extremos
+    for (let dt = new Date(from); dt <= to; dt.setDate(dt.getDate() + 1)) {
+      pushDay(toLocalYMD(dt))
+    }
+    return res
+  }
+
+  // por defecto: hoy
+  pushDay(dayKey())
+  return res
+}
