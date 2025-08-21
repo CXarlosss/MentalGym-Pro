@@ -54,7 +54,7 @@ export default function Footer() {
             <FooterLink href="/dashboard/gym">Gym</FooterLink>
             <FooterLink href="/dashboard/historial">Historial</FooterLink>
             <span className="hidden h-4 w-px bg-white/30 md:block" />
-            <FooterLink href="/changelog" subtle>
+            <FooterLink href="/novedades/" subtle>
               Novedades
             </FooterLink>
           </nav>

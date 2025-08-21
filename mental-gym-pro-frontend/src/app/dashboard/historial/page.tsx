@@ -4,7 +4,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -14,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-// 👇 importa tu API real (ya la exportaste en lib/api/index)
+// API real (o mock si NEXT_PUBLIC_USE_MOCK=true)
 import { fetchMySessions } from "@/lib/api/";
 
 // Tipos UI de esta página
@@ -22,36 +21,45 @@ type Activity = {
   id: string;
   name: string;
   category: "memoria" | "atencion" | "logica" | "calculo";
-  score: number;
+  score: number; // 0..100
   date: string; // ISO
   durationMin: number;
 };
-// Pon esto arriba del archivo (junto a Activity)
-type SessionLike = {
+
+// Estructura genérica de sesiones que devuelve tu backend
+interface SessionLike {
   _id?: string;
   id?: string;
-  exercise?: { title?: string; category?: Activity["category"] };
+  exercise?: { title?: string; category?: string };
   title?: string;
-  category?: Activity["category"];
+  category?: string;
   score?: number;
   result?: { score?: number };
   startedAt?: string;
   createdAt?: string;
   endedAt?: string;
   updatedAt?: string;
+}
+
+// Mapeo de categorías backend -> UI
+const toCategory = (raw?: string): Activity["category"] => {
+  const r = (raw ?? "").toLowerCase();
+  if (["memoria", "memory"].includes(r)) return "memoria";
+  if (["atencion", "attention", "focus"].includes(r)) return "atencion";
+  if (["logica", "logic", "reasoning"].includes(r)) return "logica";
+  if (["calculo", "calculation", "math", "maths"].includes(r)) return "calculo";
+  return "memoria";
 };
 
-// Utilidad para asegurar la categoría
-const toCategory = (raw?: string): Activity["category"] => {
-  const allowed: Activity["category"][] = [
-    "memoria",
-    "atencion",
-    "logica",
-    "calculo",
-  ];
-  return allowed.includes(raw as Activity["category"])
-    ? (raw as Activity["category"])
-    : "memoria";
+// Normaliza cualquier escala común a 0–100
+const normalizeScore = (raw?: number): number => {
+  if (raw == null || Number.isNaN(raw)) return 0;
+  let n = raw;
+  if (n > 0 && n <= 1) n *= 100; // 0–1 -> %
+  else if (n > 1 && n <= 10) n *= 10; // 1–10 -> 0–100
+  while (n > 100) n /= 10; // p.ej. 740 -> 74
+  n = Math.round(n);
+  return Math.max(0, Math.min(100, n));
 };
 
 function formatDate(d: string) {
@@ -74,7 +82,6 @@ type SortKey = "date" | "score" | "duration" | "name";
 
 export default function HistoryPage() {
   const { user } = useAuth();
-  const router = useRouter();
 
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,10 +100,9 @@ export default function HistoryPage() {
     let alive = true;
     (async () => {
       try {
-        if (!user) return; // opcional: redirigir a login
-        const sessions = await fetchMySessions(); // ← API real o mock según USE_MOCK
-        // Mapea tu tipo de sesión a Activity para la tabla
-        // Si fetchMySessions no está tipado, castea el array una sola vez:
+        if (!user) return;
+        const sessions = await fetchMySessions();
+
         const mapped: Activity[] = (sessions as SessionLike[]).map((s) => {
           const started = new Date(s.startedAt ?? s.createdAt ?? Date.now());
           const ended = new Date(s.endedAt ?? s.updatedAt ?? started);
@@ -105,11 +111,17 @@ export default function HistoryPage() {
             Math.round((ended.getTime() - started.getTime()) / 60000)
           );
 
+          const rawScore = Number(s.result?.score ?? s.score ?? 0);
+          const id =
+            String(s._id ?? s.id) ||
+            (globalThis.crypto?.randomUUID?.() ??
+              `${Date.now()}_${Math.random()}`);
+
           return {
-            id: String(s._id ?? s.id ?? crypto.randomUUID()),
+            id,
             name: s.exercise?.title ?? s.title ?? "Ejercicio",
             category: toCategory(s.exercise?.category ?? s.category),
-            score: Math.round(s.score ?? s.result?.score ?? 0),
+            score: normalizeScore(rawScore),
             date:
               s.endedAt ??
               s.updatedAt ??
@@ -162,7 +174,7 @@ export default function HistoryPage() {
     return filtered.slice(from, from + pageSize);
   }, [filtered, page]);
 
-  // Reset página (usa useEffect, no useMemo, para evitar efectos en memo)
+  // Reset de página al cambiar filtros/orden
   useEffect(() => {
     setPage(1);
   }, [query, category, minScore, sortBy, sortDir]);
@@ -171,7 +183,7 @@ export default function HistoryPage() {
   if (error) return <main className="p-8 text-red-600">{error}</main>;
 
   return (
-    <main className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
+    <main className="p-4 md:p-8 space-y-6 bg-white">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
@@ -182,13 +194,18 @@ export default function HistoryPage() {
           </p>
         </div>
         <Link href="/dashboard">
-          <Button variant="outline">← Volver al dashboard</Button>
+          <Button
+            variant="outline"
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+          >
+            ← Volver al dashboard
+          </Button>
         </Link>
       </div>
 
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
-          <CardTitle>Filtrar y ordenar</CardTitle>
+          <CardTitle className="text-gray-900">Filtrar y ordenar</CardTitle>
           <CardDescription>
             Refina la lista para encontrar sesiones concretas.
           </CardDescription>
@@ -199,7 +216,7 @@ export default function HistoryPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar por nombre…"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
 
             <select
@@ -207,7 +224,7 @@ export default function HistoryPage() {
               onChange={(e) =>
                 setCategory(e.target.value as "all" | Activity["category"])
               }
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="all">Todas las categorías</option>
               <option value="memoria">Memoria</option>
@@ -219,7 +236,7 @@ export default function HistoryPage() {
             <select
               value={minScore}
               onChange={(e) => setMinScore(Number(e.target.value))}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value={0}>Puntuación mínima: 0%</option>
               <option value={50}>Puntuación mínima: 50%</option>
@@ -230,7 +247,7 @@ export default function HistoryPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortKey)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="date">Ordenar por fecha</option>
               <option value="score">Ordenar por puntuación</option>
@@ -241,7 +258,7 @@ export default function HistoryPage() {
             <select
               value={sortDir}
               onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="desc">Descendente</option>
               <option value="asc">Ascendente</option>
@@ -250,9 +267,9 @@ export default function HistoryPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-white">
         <CardHeader>
-          <CardTitle>Sesiones</CardTitle>
+          <CardTitle className="text-gray-900">Sesiones</CardTitle>
           <CardDescription>
             {filtered.length} resultados • Página {page} de {totalPages}
           </CardDescription>
@@ -323,12 +340,14 @@ export default function HistoryPage() {
                 variant="outline"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
+                className="text-emerald-700 border-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
               >
                 Anterior
               </Button>
               <Button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 Siguiente
               </Button>
