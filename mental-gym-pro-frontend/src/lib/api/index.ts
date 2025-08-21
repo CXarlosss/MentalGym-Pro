@@ -1,33 +1,30 @@
-// src/lib/api/index.ts
-
 // Base
 export * from './config';
 
-// ----- Cognitive (NO duplicar sesiones) -----
+// Cognitive
 export {
   fetchExercises,
   fetchExercise,
   fetchRecentExercises,
   fetchExerciseCategories,
 } from './cognitive/exercises';
-
 export {
   startExerciseSession,
   completeExercise,
   fetchMySessions,
 } from './cognitive/sessionController';
 
-// ----- Progreso -----
-export { fetchUserProgress } from './progress/progress';
+// Progreso: solo lo necesario (explícito para evitar colisiones)
+export { fetchUserProgress } from './progress';
 
-// ----- Gamificación -----
-export * from './gamification/gamification';
+// Gamificación: aquí vive fetchActiveChallenges
+export { fetchActiveChallenges } from './gamification/gamification';
 
-// ----- Fitness -----
-export * from './fitness/fitness'; // aquí deben estar getWeeklyActivity, etc.
+// Fitness
+export * from './fitness/fitness';
 
-// ----- Nutrición -----
+// Nutrición
 export * from './nutrition/nutrition';
 
-// ----- User -----
-export * from './user/user.api'
+// User
+export * from './user/user.api';
