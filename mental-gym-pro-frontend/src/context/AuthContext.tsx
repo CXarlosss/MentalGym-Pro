@@ -1,20 +1,32 @@
+// src/context/AuthContext.tsx
 'use client'
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { registerUser, loginUser, logoutUser, getCurrentUser } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
 import { updateUserProfile } from '@/lib/api/user/user.api'
-import type { User } from '@/types' // ✅ Importa el tipo User del archivo de tipos global
-import { clearLegacyLocalData, clearUserScopedData } from '@/lib/api/'; 
+import type { User } from '@/types'
+import { clearLegacyLocalData, clearUserScopedData } from '@/lib/api/'
 
+// 👇 helper para derivar un ID estable
 
-// ✅ Elimina esta definición local de 'User' para evitar el conflicto
-// type User = {
-//   id: string
-//   name: string
-//   email: string
-//   avatar?: string
-// }
+type MaybeIdUser = Partial<User> & {
+  _id?: string;
+  id?: string;
+  username?: string;
+};
+
+function deriveUserId(u?: MaybeIdUser | null): string | null {
+  if (!u) return null;
+
+  if (typeof u._id === 'string' && u._id) return u._id;
+  if (typeof u.id === 'string' && u.id) return u.id;
+  if (typeof u.email === 'string' && u.email) return u.email;
+  if (typeof u.username === 'string' && u.username) return u.username;
+  if (typeof u.name === 'string' && u.name) return u.name;
+
+  return null;
+}
 
 type AuthContextType = {
   user: User | null
@@ -35,14 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadUser() {
       try {
+        setLoading(true)
         const token = localStorage.getItem('token')
         const cached = localStorage.getItem('user')
-        setLoading(true)
-
         if (!token) return
+
         if (cached) {
-          // ✅ Ahora el tipo de `cached` es compatible con el tipo `User` del estado
-          setUser(JSON.parse(cached))
+          const u: User = JSON.parse(cached)
+          setUser(u)
+          // ✅ asegura mg:userId también en hidratación desde caché
+          const uid = deriveUserId(u)
+          if (uid) localStorage.setItem('mg:userId', uid)
           return
         }
 
@@ -50,15 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const u = await getCurrentUser(token)
           localStorage.setItem('user', JSON.stringify(u))
           setUser(u)
+          const uid = deriveUserId(u)
+          if (uid) localStorage.setItem('mg:userId', uid)
         } catch (e) {
           console.warn('getCurrentUser falló, limpiando sesión', e)
           localStorage.removeItem('token')
           localStorage.removeItem('user')
         }
-      } catch (error) {
-        console.error('Error loading user:', error)
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
       } finally {
         setLoading(false)
       }
@@ -70,19 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       const { user: newUser, token } = await registerUser({ name, email, password })
-
-      // ✅ `newUser` debería ser un objeto con _id, createdAt y updatedAt
       setUser(newUser)
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(newUser))
-      clearLegacyLocalData() // Limpia datos antiguos si es necesario
-      
+      // ✅ guarda el bucket-id del usuario
+      const uid = deriveUserId(newUser)
+      if (uid) localStorage.setItem('mg:userId', uid)
+
+      clearLegacyLocalData()
       toast.success('¡Registro exitoso!')
       router.push('/dashboard')
-    } catch (error) {
-      console.error('Registration error:', error)
-      toast.error(error instanceof Error ? error.message : 'Error en el registro')
-      throw error
     } finally {
       setLoading(false)
     }
@@ -92,13 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       const { user: loggedInUser, token } = await loginUser({ email, password })
-
-      // ✅ `loggedInUser` debería ser un objeto con _id, createdAt y updatedAt
       setUser(loggedInUser)
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(loggedInUser))
-      clearLegacyLocalData() // Limpia datos antiguos si es necesario
+      // ✅ guarda el bucket-id del usuario
+      const uid = deriveUserId(loggedInUser)
+      if (uid) localStorage.setItem('mg:userId', uid)
 
+      clearLegacyLocalData()
       toast.success('¡Bienvenido de nuevo!')
       router.replace('/dashboard')
     } catch (error) {
@@ -120,7 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       }
     } finally {
-      clearUserScopedData();
+      // ❗️esto NO borra tus historiales por-usuario,
+      // solo limpia estado volátil y el mg:userId actual.
+      clearUserScopedData()
+
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       setUser(null)
@@ -137,34 +151,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setLoading(true)
       const updatedUser = await updateUserProfile(userData)
-      
-      // ✅ El objeto `updatedUser` ahora es del tipo correcto (`User` con `_id`)
       setUser(updatedUser)
       localStorage.setItem('user', JSON.stringify(updatedUser))
 
+      // ✅ por si cambió el identificador mostrado
+      const uid = deriveUserId(updatedUser)
+      if (uid) localStorage.setItem('mg:userId', uid)
+
       toast.success('Perfil actualizado correctamente')
-    } catch (error) {
-      console.error('Error updating user:', error)
-      toast.error('No se pudo actualizar el perfil')
-      throw error
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <AuthContext.Provider
-      value={{ user, loading, register, login, logout, updateUser }}
-    >
+    <AuthContext.Provider value={{ user, loading, register, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider')
-  }
-  return context
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth debe usarse dentro de un AuthProvider')
+  return ctx
 }

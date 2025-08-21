@@ -1,7 +1,9 @@
+// src/lib/api/index.ts
+
 // Base
 export * from './config';
 
-// Cognitive
+// Cognitive …
 export {
   fetchExercises,
   fetchExercise,
@@ -14,10 +16,13 @@ export {
   fetchMySessions,
 } from './cognitive/sessionController';
 
-// Progreso: solo lo necesario (explícito para evitar colisiones)
+
+export { clearLegacyLocalData, clearUserScopedData } from './localData';
+
+// Progreso
 export { fetchUserProgress } from './progress';
 
-// Gamificación: aquí vive fetchActiveChallenges
+// Gamificación
 export { fetchActiveChallenges } from './gamification/gamification';
 
 // Fitness
@@ -28,3 +33,4 @@ export * from './nutrition/nutrition';
 
 // User
 export * from './user/user.api';
+
