@@ -1,32 +1,30 @@
 // src/app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
 import {
   fetchUserProgress,
   fetchActiveChallenges,
+  fetchMyChallenges,            // 👈 nuevo
   fetchRecentExercises,
   fetchExercises,
   fetchExerciseCategories,
- 
   getWeeklyActivity,
 } from "@/lib/api/";
-import { getTodayNutrition, getNutritionTargets } from '@/lib/api/nutrition/nutrition';
-
+import { getTodayNutrition, getNutritionTargets } from "@/lib/api/nutrition/nutrition";
 
 import ProgressChart from "@/components/dashboard/ProgressChart";
 import ExerciseCard from "@/components/cards/ExerciseCard";
 import ChallengeItem from "@/components/exercises/ChallengeItem";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import WelcomeBanner from "@/components/layout/WellcomeBanner"; // ✅ ruta/nombre corregidos
+import WelcomeBanner from "@/components/layout/WellcomeBanner";
 import StatsCard from "@/components/cards/StatsCard";
 import SearchHeader from "@/components/exercises/SearchHeader";
 import FilterPanel from "@/components/exercises/FilterPanel";
 
-// UI extra
 import FabQuickActions from "@/components/layout/FabQuickActions";
 import StreakHeatmap from "@/components/dashboard/StreakHeatmap";
 import GoalRing from "@/components/dashboard/GoalRing";
@@ -37,18 +35,18 @@ import CollapsibleSection from "@/components/layout/CollapsibleSection";
 import type {
   Exercise,
   Challenge,
+  UserChallenge,                // 👈 tipo para mis desafíos
   DashboardStats,
   DailyNutrition,
   NutritionTargets,
   WeeklyActivitySummary,
 } from "@/types";
 
-// ------ Tipado de datos del Dashboard ------
 type DashboardData = DashboardStats & {
   recentExercises: Exercise[];
   activeChallenges: Challenge[];
 };
-// ------ Filtros de ejercicios ------
+
 type Filters = {
   searchQuery: string;
   category: string;
@@ -74,6 +72,9 @@ export default function DashboardPage() {
     sortBy: "recent",
   });
 
+  // Gamificación (mis desafíos)
+  const [myChallenges, setMyChallenges] = useState<UserChallenge[]>([]); // 👈 nuevo
+
   // Extra UI state
   const [openAch, setOpenAch] = useState(false);
 
@@ -88,7 +89,6 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
-        // Mete también today/targets en el Promise.all
         const [
           progress,
           challenges,
@@ -98,6 +98,7 @@ export default function DashboardPage() {
           wAct,
           todayData,
           targetsData,
+          mine, // 👈 mis desafíos
         ] = await Promise.all([
           fetchUserProgress(),
           fetchActiveChallenges(),
@@ -105,8 +106,9 @@ export default function DashboardPage() {
           fetchExercises(),
           fetchExerciseCategories(),
           getWeeklyActivity(),
-          getTodayNutrition(), // 👈 ahora async
-          getNutritionTargets(), // 👈 ahora async
+          getTodayNutrition(),
+          getNutritionTargets(),
+          fetchMyChallenges(), // 👈 nuevo
         ]);
 
         setData({
@@ -118,15 +120,14 @@ export default function DashboardPage() {
           activeChallenges: challenges,
         });
 
-        const list = Array.isArray(allExercises)
-          ? allExercises
-          : allExercises.items;
+        const list = Array.isArray(allExercises) ? allExercises : allExercises.items;
         setExercises(list);
         setCategories(cats);
         setWeekAct(wAct);
 
-        setToday(todayData); // 👈 objeto, no Promise
-        setTargets(targetsData); // 👈 objeto, no Promise
+        setToday(todayData);
+        setTargets(targetsData);
+        setMyChallenges(mine); // 👈 guardar mis desafíos
       } catch (err) {
         console.error(err);
         setError("Error al cargar los datos del dashboard");
@@ -136,6 +137,28 @@ export default function DashboardPage() {
     }
     if (user) loadDashboardData();
   }, [user]);
+
+  // Refrescar desafíos cuando cambie el estado local (join/complete)
+  const refreshChallenges = useCallback(async () => {
+    try {
+      const [active, mine] = await Promise.all([
+        fetchActiveChallenges(),
+        fetchMyChallenges(), // 👈 refrescar mis desafíos también
+      ]);
+      setData((prev) => (prev ? { ...prev, activeChallenges: active } : prev));
+      setMyChallenges(mine);
+    } catch {
+      // ignoramos errores de refresco puntual
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => refreshChallenges();
+    if (typeof window !== "undefined") {
+      window.addEventListener("mg:challenges-changed", handler);
+      return () => window.removeEventListener("mg:challenges-changed", handler);
+    }
+  }, [refreshChallenges]);
 
   // ---------- Filtrado ----------
   const filteredExercises = useMemo(() => {
@@ -231,30 +254,18 @@ export default function DashboardPage() {
         <CollapsibleSection id="goals" title="Objetivos diarios">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <GoalRing label="Calorías" value={kcalToday} goal={kcalGoal} />
-            <GoalRing
-              label="Agua"
-              value={waterToday}
-              goal={waterGoal}
-              unit="ml"
-            />
+            <GoalRing label="Agua" value={waterToday} goal={waterGoal} unit="ml" />
             <GoalRing label="Pasos" value={stepsToday} goal={stepsGoal} />
           </div>
         </CollapsibleSection>
+
         {/* Heatmap de rachas / actividad semanal */}
-        <CollapsibleSection
-          id="heatmap"
-          title="Racha (últimos 7 días)"
-          defaultOpen={false}
-        >
+        <CollapsibleSection id="heatmap" title="Racha (últimos 7 días)" defaultOpen={false}>
           <StreakHeatmap values={data.weeklyData} />
         </CollapsibleSection>
+
         {/* Lanzadera: accesos rápidos */}
-        <CollapsibleSection
-          id="quick-access"
-          title="Accesos rápidos"
-          defaultOpen={true}
-          className="bg-gray-50"
-        >
+        <CollapsibleSection id="quick-access" title="Accesos rápidos" defaultOpen={true} className="bg-gray-50">
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <Link
               href="/dashboard/actividad"
@@ -300,6 +311,15 @@ export default function DashboardPage() {
               <div className="font-semibold">Retos mentales</div>
               <div className="text-xs text-gray-500">Explorar ejercicios</div>
             </Link>
+            <Link
+  href="/dashboard/desafios"
+  className="bg-white p-4 rounded-xl shadow-sm border hover:shadow transition"
+>
+  <div className="text-2xl mb-2">🏆</div>
+  <div className="font-semibold">Desafíos</div>
+  <div className="text-xs text-gray-500">Catálogo & mis retos</div>
+</Link>
+
 
             {recommendedId ? (
               <Link
@@ -319,47 +339,20 @@ export default function DashboardPage() {
             )}
           </div>
         </CollapsibleSection>
+
         {/* Estadísticas rápidas */}
-        <CollapsibleSection
-          id="stats"
-          title="Estadísticas rápidas"
-          defaultOpen={true}
-          className="bg-gray-50"
-        >
+        <CollapsibleSection id="stats" title="Estadísticas rápidas" defaultOpen={true} className="bg-gray-50">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <StatsCard
-              title="Racha Actual"
-              value={data.streak}
-              icon="🔥"
-              description="días consecutivos"
-            />
-            <StatsCard
-              title="Ejercicios"
-              value={data.totalExercises}
-              icon="🧠"
-              description="completados"
-            />
-            <StatsCard
-              title="Puntuación Media"
-              value={data.averageScore}
-              icon="⭐"
-              description="de 100"
-              isPercentage
-            />
-            <StatsCard
-              title="Desafíos"
-              value={data.activeChallenges.length}
-              icon="🏆"
-              description="activos"
-            />
+            <StatsCard title="Racha Actual" value={data.streak} icon="🔥" description="días consecutivos" />
+            <StatsCard title="Ejercicios" value={data.totalExercises} icon="🧠" description="completados" />
+            <StatsCard title="Puntuación Media" value={data.averageScore} icon="⭐" description="de 100" isPercentage />
+            {/* 👇 ahora muestra MIS desafíos en curso */}
+            <StatsCard title="Desafíos" value={myChallenges.length} icon="🏆" description="en curso" />
           </div>
         </CollapsibleSection>
+
         {/* Progreso semanal + recientes */}
-        <CollapsibleSection
-          id="weekly-progress"
-          title="Progreso Semanal"
-          defaultOpen={true}
-        >
+        <CollapsibleSection id="weekly-progress" title="Progreso Semanal" defaultOpen={true}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
               <h2 className="text-2xl font-bold mb-4">Tu Progreso Semanal</h2>
@@ -373,16 +366,10 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {data.recentExercises.length > 0 ? (
                   data.recentExercises.map((exercise) => (
-                    <ExerciseCard
-                      key={exercise._id}
-                      exercise={exercise}
-                      compact
-                    />
+                    <ExerciseCard key={exercise._id} exercise={exercise} compact />
                   ))
                 ) : (
-                  <p className="text-gray-500">
-                    Aún no has completado ejercicios
-                  </p>
+                  <p className="text-gray-500">Aún no has completado ejercicios</p>
                 )}
                 <Link
                   href="/dashboard/retosmentales"
@@ -394,18 +381,18 @@ export default function DashboardPage() {
             </div>
           </div>
         </CollapsibleSection>
-        {/* Desafíos activos */}
-        <CollapsibleSection
-          id="quick"
-          title="Accesos rápidos"
-          defaultOpen={false}
-        >
+
+        {/* Desafíos activos (catálogo) */}
+        <CollapsibleSection id="challenges" title="Desafíos" defaultOpen={false}>
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Tus Desafíos Activos</h2>
-              <button className="text-indigo-600 hover:text-indigo-800 transition-colors">
+              <Link
+                href="/dashboard/desafios"
+                className="text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
                 Ver todos →
-              </button>
+              </Link>
             </div>
 
             {data.activeChallenges.length > 0 ? (
@@ -419,55 +406,46 @@ export default function DashboardPage() {
                 <p className="text-gray-500 mb-4">
                   No tienes desafíos activos actualmente
                 </p>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                <Link
+                  href="/dashboard/desafios"
+                  className="inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                >
                   Explorar desafíos
-                </button>
+                </Link>
               </div>
             )}
           </div>
         </CollapsibleSection>
-        {/* --- Explorador de ejercicios (fusionado) --- */}
-        <CollapsibleSection
-          id="exercise-explorer"
-          title="Explorar Ejercicios"
-          defaultOpen={true}
-        >
+
+        {/* Explorador de ejercicios */}
+        <CollapsibleSection id="exercise-explorer" title="Explorar Ejercicios" defaultOpen={true}>
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Explorar Ejercicios</h2>
             </div>
 
-            {/* Header de búsqueda */}
             <div className="mb-6">
               <SearchHeader
                 searchQuery={filters.searchQuery}
-                onSearchChange={(value) =>
-                  handleFilterChange({ searchQuery: value })
-                }
+                onSearchChange={(value) => handleFilterChange({ searchQuery: value })}
               />
             </div>
 
             <div className="flex flex-col md:flex-row gap-8">
-              {/* Panel de filtros */}
               <div className="md:w-1/4">
                 <FilterPanel
                   categories={categories}
                   selectedCategory={filters.category}
                   selectedDifficulty={filters.difficulty}
                   sortBy={filters.sortBy}
-                  onCategoryChange={(category) =>
-                    handleFilterChange({ category })
-                  }
-                  onDifficultyChange={(difficulty) =>
-                    handleFilterChange({ difficulty })
-                  }
+                  onCategoryChange={(category) => handleFilterChange({ category })}
+                  onDifficultyChange={(difficulty) => handleFilterChange({ difficulty })}
                   onSortChange={(sortBy) =>
                     handleFilterChange({ sortBy: sortBy as Filters["sortBy"] })
                   }
                 />
               </div>
 
-              {/* Grid de ejercicios filtrados */}
               <div className="md:w-3/4">
                 {filteredExercises.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -502,17 +480,13 @@ export default function DashboardPage() {
             </div>
           </div>
         </CollapsibleSection>
+
         {/* Recomendación del día */}
-        <CollapsibleSection
-          id="recommendation"
-          title="Recomendación del Día"
-          defaultOpen={true}
-        >
+        <CollapsibleSection id="recommendation" title="Recomendación del Día" defaultOpen={true}>
           <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
             <h2 className="text-xl font-bold mb-2">Recomendación del Día</h2>
             <p className="text-gray-700 mb-4">
-              Basado en tu actividad reciente, te recomendamos trabajar en
-              ejercicios de memoria espacial.
+              Basado en tu actividad reciente, te recomendamos trabajar en ejercicios de memoria espacial.
             </p>
             {recommendedId ? (
               <Link
@@ -531,8 +505,8 @@ export default function DashboardPage() {
             )}
           </div>
         </CollapsibleSection>
-        {/* Logros */}
 
+        {/* Logros */}
         <div className="flex justify-end">
           <button
             onClick={() => setOpenAch(true)}
@@ -549,6 +523,7 @@ export default function DashboardPage() {
           streak={data.streak}
         />
       </div>
+
       {/* FAB de acciones rápidas */}
       <FabQuickActions />
     </div>

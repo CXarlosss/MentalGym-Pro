@@ -1,74 +1,107 @@
 // src/lib/api/progress/progress.local.ts
-import type { DashboardStats, Challenge } from '@/types';
-import { LS_KEYS, scopedLSKey, toLocalYMD, todayKey } from '../config';
+import type { DashboardStats } from '@/types'
 
-// Estructura esperada de tu log local (ajústala si difiere)
-type ActivityLogItem = {
-  date: string;       // 'YYYY-MM-DD'
-  kind?: string;      // 'mental' | 'gym' | 'cardio' ...
-  score?: number;     // 0..100
-};
+// Debe coincidir con cómo las guarda sessionController
+type LocalSession = {
+  _id: string
+  user: string
+  exercise: { _id: string; title?: string; category?: string }
+  score?: number
+  durationMin?: number
+  startedAt: string // ISO
+  endedAt?: string  // ISO
+  createdAt: string // ISO
+  updatedAt: string // ISO
+}
 
-function readJSON<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
+// Clave legacy global (por compat)
+const LEGACY_KEY = 'mg:cog:sessions:v1'
+// Clave actual por usuario activo (se basa en mg:userId que pone AuthContext)
+const userBucketKey = (): string => {
+  if (typeof window === 'undefined') return LEGACY_KEY
+  const uid = localStorage.getItem('mg:userId') || 'anonymous'
+  return `mg:cog:sessions:${uid}:v1`
+}
+
+function readLS<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback
   try {
-    const raw = localStorage.getItem(scopedLSKey(key));
-    return raw ? (JSON.parse(raw) as T) : fallback;
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
-    return fallback;
+    return fallback
   }
+}
+
+function readLocalSessions(): LocalSession[] {
+  // Lee el bucket vigente del usuario + legacy por compatibilidad
+  const current = readLS<LocalSession[]>(userBucketKey(), [])
+  const legacy  = readLS<LocalSession[]>(LEGACY_KEY, [])
+  return [...current, ...legacy]
+}
+
+function toYMD(d: Date): string {
+  const y = d.getFullYear()
+  const m = `${d.getMonth() + 1}`.padStart(2, '0')
+  const dd = `${d.getDate()}`.padStart(2, '0')
+  return `${y}-${m}-${dd}`
 }
 
 function lastNDaysKeys(n: number): string[] {
-  const out: string[] = [];
-  const d = new Date();
+  const out: string[] = []
+  const base = new Date()
   for (let i = n - 1; i >= 0; i--) {
-    const dd = new Date(d); dd.setDate(d.getDate() - i);
-    out.push(toLocalYMD(dd));
+    const d = new Date(base)
+    d.setDate(base.getDate() - i)
+    out.push(toYMD(d))
   }
-  return out;
+  return out
+}
+
+// Normaliza scores a 0..100 por si vienen como 0..1, 1..10, etc.
+function normalizeScore(raw?: number): number {
+  if (raw == null || Number.isNaN(raw)) return 0
+  let n = raw
+  if (n > 0 && n <= 1) n *= 100
+  else if (n > 1 && n <= 10) n *= 10
+  while (n > 100) n /= 10
+  n = Math.round(n)
+  return Math.max(0, Math.min(100, n))
 }
 
 export async function fetchUserProgress(): Promise<DashboardStats> {
-  // lee un log por usuario (ajusta a la clave real si usas otra)
-  const log = readJSON<ActivityLogItem[]>(LS_KEYS.activity, []);
+  const sessions = readLocalSessions()
 
-  // cuenta “eventos” por día (filtra ‘mental’ si lo deseas)
-  const keys = lastNDaysKeys(7);
-  const byDay = new Map<string, number>();
-  for (const k of keys) byDay.set(k, 0);
-  for (const it of log) {
-    if (byDay.has(it.date)) {
-      // si quieres sólo mentales: if (it.kind === 'mental') ...
-      byDay.set(it.date, (byDay.get(it.date) ?? 0) + 1);
-    }
-  }
-
-  const weeklyData = keys.map(k => byDay.get(k) ?? 0);
-
-  // streak: días consecutivos (hoy hacia atrás) con actividad > 0
-  let streak = 0;
-  {
-    const today = todayKey();
-    const idx = keys.indexOf(today);
-    const scan = idx === -1 ? keys.length - 1 : idx;
-    for (let i = scan; i >= 0; i--) {
-      if (weeklyData[i] > 0) streak++;
-      else break;
-    }
-  }
-
-  // total/avg: sobre todo el log (ajústalo a tu modelo real)
-  const totalExercises = log.length;
-  const scores = log.map(l => l.score).filter((s): s is number => typeof s === 'number');
+  // Total y media
+  const totalExercises = sessions.length
+  const scores = sessions.map(s => normalizeScore(s.score)).filter(n => !Number.isNaN(n))
   const averageScore = scores.length
     ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-    : 0;
+    : 0
 
-  return { weeklyData, streak, totalExercises, averageScore };
+  // weeklyData: conteo por día (últimos 7)
+  const keys = lastNDaysKeys(7)
+  const counts = new Map<string, number>(keys.map(k => [k, 0]))
+
+  for (const s of sessions) {
+    const iso = s.endedAt || s.updatedAt || s.startedAt || s.createdAt
+    const k = toYMD(new Date(iso))
+    if (counts.has(k)) counts.set(k, (counts.get(k) ?? 0) + 1)
+  }
+
+  const weeklyData = keys.map(k => counts.get(k) ?? 0)
+
+  // racha: días consecutivos desde hoy hacia atrás con actividad > 0
+  let streak = 0
+  for (let i = keys.length - 1; i >= 0; i--) {
+    if ((counts.get(keys[i]) ?? 0) > 0) streak++
+    else break
+  }
+
+  return { weeklyData, streak, totalExercises, averageScore }
 }
 
-export const fetchActiveChallenges = async (): Promise<Challenge[]> => {
-  // si quieres, persiste retos en LS y léelos aquí; de momento vacío
-  return [];
-};
+// Si no usas retos locales en mock, devuelve vacío (no se reexporta desde index)
+export async function fetchActiveChallenges() {
+  return []
+}

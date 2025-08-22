@@ -1,44 +1,71 @@
+// src/app/dashboard/gym/page.tsx
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { motion} from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
-  seedDefaultRoutinesOnce, getRoutines, duplicateRoutine,
+  seedDefaultRoutinesOnce,
+  getRoutines,
+  duplicateRoutine,
   getFavoriteExercises,
-  addGymSetToday, getGymWeeklySummary, getGroupVolumeThisWeek,
-  epley1RM, brzycki1RM, targetFromPercent1RM
+  addGymSetToday,
+  getGymWeeklySummary,
+  getGroupVolumeThisWeek,
+  epley1RM,
+  brzycki1RM,
+  targetFromPercent1RM,
 } from '@/lib/api/fitness/fitness'
 import type { LiftTag } from '@/types'
 
-// Timer mejorado con animaciones
+// ===============================
+// Utilidades
+// ===============================
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
+const fmtInt = (n: number) => n.toLocaleString('es-ES')
+
+// ===============================
+// Temporizador de descanso (seguro)
+// ===============================
 function RestTimer({ seconds = 90 }: { seconds?: number }) {
   const [left, setLeft] = useState(seconds)
   const iv = useRef<number | undefined>(undefined)
-  
+
   useEffect(() => {
-    clearInterval(iv.current)
-    iv.current = window.setInterval(() => setLeft(prev => {
-      if (prev <= 1) {
-        clearInterval(iv.current)
-        if (Notification && Notification.permission === 'granted') {
-          new Notification('¡Descanso terminado!')
+    if (iv.current) clearInterval(iv.current)
+    iv.current = window.setInterval(() => {
+      setLeft(prev => {
+        const nxt = Math.max(0, prev - 1)
+        if (nxt === 0) {
+          if (iv.current) clearInterval(iv.current)
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('¡Descanso terminado!')
+          }
         }
-      }
-      return Math.max(0, prev - 1)
-    }), 1000)
-    return () => clearInterval(iv.current)
+        return nxt
+      })
+    }, 1000)
+    return () => {
+      if (iv.current) clearInterval(iv.current)
+    }
   }, [seconds])
 
+  const requestNotify = async () => {
+    if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+      try { await Notification.requestPermission() } catch {}
+    }
+  }
+
   return (
-    <motion.div 
+    <motion.div
       className="flex items-center gap-2"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <span className="text-sm text-gray-600">Descanso:</span>
-      <motion.span 
+      <motion.span
         className="font-semibold"
         key={left}
         initial={{ scale: 1.2 }}
@@ -51,59 +78,80 @@ function RestTimer({ seconds = 90 }: { seconds?: number }) {
         <Button variant="outline" onClick={() => setLeft(seconds)}>Reiniciar</Button>
       </motion.div>
       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-        <Button variant="outline" onClick={async () => {
-          if (Notification && Notification.permission !== 'granted') {
-            await Notification.requestPermission()
-          }
-        }}>Notificar</Button>
+        <Button variant="outline" onClick={requestNotify}>Notificar</Button>
       </motion.div>
     </motion.div>
   )
 }
 
+// ===============================
+// Página principal
+// ===============================
 export default function GymPage() {
   const [routines, setRoutines] = useState(getRoutines())
   const [fav] = useState(getFavoriteExercises())
+
+  // %1RM
   const [percent, setPercent] = useState(80)
   const [oneRM, setOneRM] = useState(100)
 
+  // Set rápido
+  const [exerciseName, setExerciseName] = useState<string>('') // ✅ controlado
   const [weight, setWeight] = useState<number>(60)
   const [reps, setReps] = useState<number>(5)
   const [rpe, setRpe] = useState<number>(8)
   const [rir, setRir] = useState<number>(2)
   const [marker, setMarker] = useState<'warmup' | 'top' | 'backoff' | ''>('')
 
+  // KPIs
   const [summary, setSummary] = useState<{ vol: number; streak: number; top?: string }>({ vol: 0, streak: 0 })
   const [groups, setGroups] = useState<{ group: LiftTag; sets: number }[]>([])
 
+  // Carga inicial + seed
   useEffect(() => {
     seedDefaultRoutinesOnce()
     setRoutines(getRoutines())
     refreshWeekly()
   }, [])
 
-  async function refreshWeekly() {
+  // 🔔 Refrescar si otra vista modifica el gym (evento global)
+  useEffect(() => {
+    const onChange = () => { refreshWeekly(); setRoutines(getRoutines()) }
+    window.addEventListener('mg:gym-changed', onChange)
+    return () => window.removeEventListener('mg:gym-changed', onChange)
+  }, [])
+
+  const refreshWeekly = useCallback(async () => {
     const ws = await getGymWeeklySummary()
     const gv = await getGroupVolumeThisWeek()
     setSummary({ vol: ws.totalVolume, streak: ws.streak, top: ws.topVolumeDay?.date })
     setGroups(gv)
-  }
+  }, [])
 
   async function quickAdd(exercise: string, tags: LiftTag[] = []) {
-    await addGymSetToday({ exercise, weight, reps, rpe, rir, marker: marker || undefined, tags })
-    refreshWeekly()
+    await addGymSetToday({
+      exercise,
+      weight: Math.max(0, weight),
+      reps: clamp(reps, 1, 50),
+      rpe: clamp(rpe, 1, 10),
+      rir: clamp(rir, 0, 10),
+      marker: marker || undefined,
+      tags,
+    })
+    // Refresca por si tu fitness API aún no emite 'mg:gym-changed'
+    await refreshWeekly()
   }
 
-  const target = useMemo(() => targetFromPercent1RM(oneRM, percent), [oneRM, percent])
-  const estEpley = useMemo(() => epley1RM(weight, reps), [weight, reps])
-  const estBrzycki = useMemo(() => brzycki1RM(weight, reps), [weight, reps])
+  const target = useMemo(() => targetFromPercent1RM(oneRM, clamp(percent, 1, 100)), [oneRM, percent])
+  const estEpley = useMemo(() => epley1RM(Math.max(0, weight), clamp(reps, 1, 50)), [weight, reps])
+  const estBrzycki = useMemo(() => brzycki1RM(Math.max(0, weight), clamp(reps, 1, 50)), [weight, reps])
 
   return (
     <motion.main
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-       className="max-w-7xl mx-auto p-4 space-y-6  bg-gradient-to-br from-indigo-50 to-gray-50 min-h-screen"
+      className="max-w-7xl mx-auto p-4 space-y-6 bg-gradient-to-br from-indigo-50 to-gray-50 min-h-screen"
     >
       {/* Header */}
       <motion.div
@@ -129,9 +177,9 @@ export default function GymPage() {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { title: "Volumen 7 días", value: `${summary.vol} kg·reps` },
-          { title: "Racha", value: `${summary.streak} días` },
-          { title: "Mejor día", value: summary.top ?? '—' }
+          { title: 'Volumen 7 días', value: `${fmtInt(summary.vol)} kg·reps` },
+          { title: 'Racha', value: `${summary.streak} días` },
+          { title: 'Mejor día', value: summary.top ?? '—' },
         ].map((kpi, index) => (
           <motion.div
             key={kpi.title}
@@ -145,11 +193,7 @@ export default function GymPage() {
       </div>
 
       {/* Target %1RM */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">%1RM objetivo</CardTitle>
@@ -157,11 +201,11 @@ export default function GymPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <NumberInput label="Tu 1RM (kg)" value={oneRM} onChange={setOneRM} />
-              <NumberInput label="% objetivo" value={percent} onChange={setPercent} />
+              <NumberInput label="Tu 1RM (kg)" value={oneRM} onChange={(n) => setOneRM(Math.max(0, n))} />
+              <NumberInput label="% objetivo" value={percent} onChange={(n) => setPercent(clamp(n, 1, 100))} />
               <div className="flex flex-col justify-end">
                 <div className="text-sm text-gray-500">Peso objetivo</div>
-                <motion.div 
+                <motion.div
                   className="text-2xl font-semibold"
                   key={target}
                   initial={{ scale: 1.1 }}
@@ -177,12 +221,8 @@ export default function GymPage() {
         </Card>
       </motion.div>
 
-      {/* Logger rápido con RPE/RIR/marker */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      {/* Logger rápido */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">Registrar set rápido</CardTitle>
@@ -190,11 +230,23 @@ export default function GymPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
-              <TextInput label="Ejercicio" placeholder="Press banca / Sentadilla…" id="exerciseName" />
-              <NumberInput label="Peso (kg)" value={weight} onChange={setWeight} />
-              <NumberInput label="Reps" value={reps} onChange={setReps} />
-              <NumberInput label="RPE" value={rpe} onChange={setRpe} />
-              <NumberInput label="RIR" value={rir} onChange={setRir} />
+              <TextInput
+                label="Ejercicio"
+                id="exerciseName"
+                placeholder="Press banca / Sentadilla…"
+                value={exerciseName}
+                onChange={setExerciseName}
+                onEnter={() => {
+                  const ex = exerciseName.trim()
+                  if (!ex) return
+                  quickAdd(ex)
+                  setExerciseName('')
+                }}
+              />
+              <NumberInput label="Peso (kg)" value={weight} onChange={(n) => setWeight(Math.max(0, n))} />
+              <NumberInput label="Reps" value={reps} onChange={(n) => setReps(clamp(n, 1, 50))} />
+              <NumberInput label="RPE" value={rpe} onChange={(n) => setRpe(clamp(n, 1, 10))} />
+              <NumberInput label="RIR" value={rir} onChange={(n) => setRir(clamp(n, 0, 10))} />
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Marcador</label>
                 <select
@@ -210,7 +262,7 @@ export default function GymPage() {
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {/* botones de ejemplo desde plantillas/favs */}
+              {/* Botones de ejemplo desde plantillas/favs */}
               {routines.slice(0, 1).flatMap(r => r.days[0].blocks).slice(0, 4).map((b, i) => (
                 <motion.div
                   key={b.exercise}
@@ -249,10 +301,10 @@ export default function GymPage() {
                 <Button
                   className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                   onClick={() => {
-                    const el = document.getElementById('exerciseName') as HTMLInputElement | null
-                    const ex = (el?.value || '').trim()
+                    const ex = exerciseName.trim()
                     if (!ex) return
                     quickAdd(ex)
+                    setExerciseName('')
                   }}
                 >
                   Guardar set
@@ -268,11 +320,7 @@ export default function GymPage() {
       </motion.div>
 
       {/* Plantillas/Rutinas */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">Plantillas</CardTitle>
@@ -294,7 +342,10 @@ export default function GymPage() {
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button
                           variant="outline"
-                          onClick={() => { duplicateRoutine(rt._id); setRoutines(getRoutines()) }}
+                          onClick={() => {
+                            duplicateRoutine(rt._id)
+                            setRoutines(getRoutines()) // por si tu API no emite el evento
+                          }}
                         >
                           Duplicar
                         </Button>
@@ -332,17 +383,13 @@ export default function GymPage() {
       </motion.div>
 
       {/* Volumen por grupo (semáforo) */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">Volumen por grupo (7 días)</CardTitle>
             <CardDescription>Series efectivas (sin calentamiento).</CardDescription>
           </CardHeader>
-          <CardContent>
+        <CardContent>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {groups.map((g, i) => {
                 const color =
@@ -358,21 +405,14 @@ export default function GymPage() {
                     transition={{ delay: 0.6 + i * 0.05 }}
                   >
                     <span className="capitalize">{g.group}</span>
-                    <motion.span
-                      className={`text-xs px-2 py-1 rounded-full ${color}`}
-                      whileHover={{ scale: 1.1 }}
-                    >
+                    <motion.span className={`text-xs px-2 py-1 rounded-full ${color}`} whileHover={{ scale: 1.1 }}>
                       {g.sets} sets
                     </motion.span>
                   </motion.div>
                 )
               })}
               {groups.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-gray-500"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-gray-500">
                   Aún sin datos.
                 </motion.div>
               )}
@@ -384,6 +424,9 @@ export default function GymPage() {
   )
 }
 
+// ===============================
+// Subcomponentes
+// ===============================
 function Kpi({ title, value }: { title: string; value: string }) {
   return (
     <motion.div whileHover={{ y: -3 }}>
@@ -394,7 +437,7 @@ function Kpi({ title, value }: { title: string; value: string }) {
             className="text-2xl font-semibold mt-1 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 300 }}
+            transition={{ type: 'spring', stiffness: 300 }}
           >
             {value}
           </motion.p>
@@ -404,7 +447,15 @@ function Kpi({ title, value }: { title: string; value: string }) {
   )
 }
 
-function NumberInput({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+function NumberInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (n: number) => void
+}) {
   return (
     <motion.div whileHover={{ y: -3 }}>
       <div>
@@ -412,8 +463,12 @@ function NumberInput({ label, value, onChange }: { label: string; value: number;
         <motion.input
           type="number"
           className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-          value={value}
-          onChange={e => onChange(Number(e.target.value))}
+          value={Number.isFinite(value) ? value : 0}
+          onChange={e => {
+            const raw = e.target.value.trim()
+            const v = raw === '' ? 0 : Number(raw)
+            onChange(Number.isFinite(v) ? v : 0)
+          }}
           whileFocus={{ scale: 1.02 }}
         />
       </div>
@@ -421,7 +476,21 @@ function NumberInput({ label, value, onChange }: { label: string; value: number;
   )
 }
 
-function TextInput({ label, id, placeholder }: { label: string; id: string; placeholder?: string }) {
+function TextInput({
+  label,
+  id,
+  placeholder,
+  value,
+  onChange,
+  onEnter,
+}: {
+  label: string
+  id: string
+  placeholder?: string
+  value: string
+  onChange: (v: string) => void
+  onEnter?: () => void
+}) {
   return (
     <motion.div whileHover={{ y: -3 }} className="col-span-2">
       <label htmlFor={id} className="block text-xs text-gray-500 mb-1">{label}</label>
@@ -429,6 +498,11 @@ function TextInput({ label, id, placeholder }: { label: string; id: string; plac
         id={id}
         placeholder={placeholder}
         className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onEnter?.()
+        }}
         whileFocus={{ scale: 1.02 }}
       />
     </motion.div>

@@ -16,14 +16,15 @@ export {
   fetchMySessions,
 } from './cognitive/sessionController';
 
-
+// Local data
 export { clearLegacyLocalData, clearUserScopedData } from './localData';
 
 // Progreso
 export { fetchUserProgress } from './progress';
 
 // Gamificación
-export { fetchActiveChallenges } from './gamification/gamification';
+// Reexporta TODO lo de gamification (activos, unirse, progreso, badges, etc.)
+export * from './gamification/gamification';
 
 // Fitness
 export * from './fitness/fitness';
@@ -33,4 +34,3 @@ export * from './nutrition/nutrition';
 
 // User
 export * from './user/user.api';
-

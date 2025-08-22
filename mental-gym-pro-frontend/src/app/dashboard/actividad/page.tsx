@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -14,14 +14,24 @@ function fmt(n: number) {
   return n.toLocaleString('es-ES')
 }
 
+// Fecha local YYYY-MM-DD (evita desajustes por UTC)
+function toLocalYMD(d = new Date()) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
 export default function ActivityPage() {
   const { user } = useAuth()
   const router = useRouter()
 
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>('')
 
-  const [todaySteps, setTodaySteps] = useState<number>(0)
+  // guarda como string para evitar NaN cuando se borra el input
+  const [todaySteps, setTodaySteps] = useState<string>('')
   const [todayNote, setTodayNote] = useState('')
   const [list, setList] = useState<ActivityEntry[]>([])
   const [weekly, setWeekly] = useState<WeeklyActivitySummary | null>(null)
@@ -31,18 +41,27 @@ export default function ActivityPage() {
       router.replace('/login')
       return
     }
-    (async () => {
+    ;(async () => {
       try {
         setLoading(true)
+        setError('')
         const [activities, summary] = await Promise.all([getActivities(), getWeeklyActivity()])
-        setList(activities)
+
+        // ordena (desc) por fecha
+        const ordered = [...activities].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+        setList(ordered)
         setWeekly(summary)
 
-        const today = new Date().toISOString().slice(0, 10)
-        const todayEntry = activities.find(a => a.date === today)
+        const todayKey = toLocalYMD()
+        const todayEntry = ordered.find(a => a.date === todayKey)
         if (todayEntry) {
-          setTodaySteps(todayEntry.steps)
+          setTodaySteps(String(todayEntry.steps ?? ''))
           setTodayNote(todayEntry.note ?? '')
+        } else {
+          setTodaySteps('')
+          setTodayNote('')
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Error al cargar actividad')
@@ -60,15 +79,22 @@ export default function ActivityPage() {
 
   async function handleSave() {
     try {
-      setLoading(true)
-      await upsertTodayActivity({ steps: Number(todaySteps) || 0, note: todayNote || undefined })
+      setSaving(true)
+      setError('')
+      const steps = parseInt(todaySteps, 10)
+      await upsertTodayActivity({ steps: Number.isFinite(steps) ? steps : 0, note: todayNote || undefined })
+
+      // recargar datos
       const [activities, summary] = await Promise.all([getActivities(), getWeeklyActivity()])
-      setList(activities)
+      const ordered = [...activities].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      setList(ordered)
       setWeekly(summary)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
@@ -110,10 +136,7 @@ export default function ActivityPage() {
           </h1>
           <p className="text-gray-600 mt-1">Registra tus pasos y consulta tu progreso semanal.</p>
         </motion.div>
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Link href="/dashboard">
             <Button variant="outline" className="flex items-center gap-1">
               <span>←</span> Volver
@@ -145,11 +168,7 @@ export default function ActivityPage() {
       </div>
 
       {/* Formulario de hoy */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">Registro de hoy</CardTitle>
@@ -160,8 +179,14 @@ export default function ActivityPage() {
               <motion.input
                 type="number"
                 min={0}
+                step={1}
                 value={todaySteps}
-                onChange={(e) => setTodaySteps(Number(e.target.value))}
+                onChange={(e) => {
+                  // permitir vacío; sólo dígitos
+                  const raw = e.target.value
+                  const clean = raw.replace(/[^\d]/g, '')
+                  setTodaySteps(clean)
+                }}
                 placeholder="Pasos de hoy"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 whileFocus={{ scale: 1.02, boxShadow: "0 0 0 2px rgba(99, 102, 241, 0.5)" }}
@@ -173,15 +198,13 @@ export default function ActivityPage() {
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 md:col-span-2"
                 whileFocus={{ scale: 1.02, boxShadow: "0 0 0 2px rgba(99, 102, 241, 0.5)" }}
               />
-              <motion.div
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Button 
                   onClick={handleSave}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  disabled={saving}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60"
                 >
-                  Guardar
+                  {saving ? 'Guardando…' : 'Guardar'}
                 </Button>
               </motion.div>
             </div>
@@ -190,11 +213,7 @@ export default function ActivityPage() {
       </motion.div>
 
       {/* Gráfico simple */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">Últimos 7 días</CardTitle>
@@ -231,11 +250,7 @@ export default function ActivityPage() {
       </motion.div>
 
       {/* Lista reciente */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
         <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
             <CardTitle className="text-indigo-700">Registros recientes</CardTitle>

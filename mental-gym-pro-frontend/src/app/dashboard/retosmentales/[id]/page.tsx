@@ -4,12 +4,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { fetchExercise, startExerciseSession, completeExercise } from '@/lib/api/cognitive/exercises'
+
+// 👇 Mantén fetchExercise aquí
+import { fetchExercise } from '@/lib/api/cognitive/exercises'
+
+// 👇 PERO estas dos venidas del índice (sessionController)
+import { startExerciseSession, completeExercise } from '@/lib/api/'
+
 import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
 import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
-// ❌ import antiguo:
-// import ExerciseSession from '@/components/exercises/detail/ExerciseSession'
-// ✅ NUEVO router por engine:
 import ExerciseRunner from '@/components/exercises/detail/ExerciseRunner'
 import ExerciseResults from '@/components/exercises/detail/ExerciseResults'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -61,7 +64,12 @@ export default function RetoMentalDetailPage() {
 
   const handleStart = async () => {
     try {
-      const session = await startExerciseSession(id) // en modo MOCK te devuelve { _id: 'sess_...' }
+      // ✅ Usa el controller correcto y guarda metadatos útiles para el historial
+      const session = await startExerciseSession(id, {
+        title: exercise?.title,
+        category: exercise?.category,
+        playedAt: new Date(),
+      })
       setSessionId(session._id)
       setStage('session')
     } catch (e) {
@@ -73,6 +81,7 @@ export default function RetoMentalDetailPage() {
   const handleComplete = async (score: number, timeSpent: number) => {
     if (!sessionId) return
     try {
+      // ✅ Esto persiste endedAt/duration y emite 'mg:sessions-changed'
       const res = await completeExercise(sessionId, { score, timeSpent, metadata: {} })
       setResults(res)
       setStage('results')
@@ -129,7 +138,6 @@ export default function RetoMentalDetailPage() {
           )}
 
           {stage === 'session' && (
-            // ✅ AQUÍ usamos el router que decide el minijuego por exercise.engine
             <ExerciseRunner
               exercise={exercise}
               onComplete={handleComplete}

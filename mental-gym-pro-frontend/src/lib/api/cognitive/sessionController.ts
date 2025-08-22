@@ -4,7 +4,6 @@ import { USE_MOCK, getJSON, postJSON } from '../config'
 
 // --------- Tipos API (backend) ----------
 type Difficulty = 'easy' | 'medium' | 'hard'
-
 type ExerciseRefApi = {
   _id: string
   title?: string
@@ -13,7 +12,6 @@ type ExerciseRefApi = {
   muscleGroup?: string
   difficulty?: Difficulty
 }
-
 type SessionApiShape = {
   _id: string
   user?: string
@@ -41,11 +39,48 @@ type LocalSession = {
   updatedAt: string // ISO
 }
 
-// clave legacy global (antiguo)
 const LEGACY_KEY = 'mg:cog:sessions:v1'
-// clave nueva por usuario
+
+// ---- helpers de bucket por-usuario ----
+// Define a type for your potential user object properties
+type UserLike = {
+  _id?: string
+  id?: string
+  email?: string
+  username?: string
+  name?: string
+}
+
+function deriveUserIdFromCache(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const cached = localStorage.getItem('user')
+    if (!cached) return null
+    const u: unknown = JSON.parse(cached)
+
+    // Check if 'u' is an object and not null
+    if (typeof u === 'object' && u !== null) {
+      // Use the type guard to safely check properties
+      const user = u as UserLike
+      const id = user._id ?? user.id ?? user.email ?? user.username ?? user.name
+      return id ? String(id) : null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+function ensureUserBucketId() {
+  if (typeof window === 'undefined') return
+  const current = localStorage.getItem('mg:userId')
+  if (!current) {
+    const derived = deriveUserIdFromCache()
+    if (derived) localStorage.setItem('mg:userId', derived)
+  }
+}
 const userBucketKey = () => {
   if (typeof window === 'undefined') return LEGACY_KEY
+  ensureUserBucketId()
   const uid = localStorage.getItem('mg:userId') || 'anonymous'
   return `mg:cog:sessions:${uid}:v1`
 }
@@ -63,8 +98,13 @@ function writeLS<T>(key: string, value: T) {
   if (typeof window === 'undefined') return
   localStorage.setItem(key, JSON.stringify(value))
 }
+function emitSessionsChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mg:sessions-changed'))
+  }
+}
 
-// migra del bucket legacy al bucket de usuario activo (una vez)
+// migra legacy → bucket de usuario (una vez)
 function migrateLegacyIfNeeded() {
   if (typeof window === 'undefined') return
   const legacy = readLS<LocalSession[]>(LEGACY_KEY, [])
@@ -74,13 +114,13 @@ function migrateLegacyIfNeeded() {
   writeLS(key, [...current, ...legacy])
   try { localStorage.removeItem(LEGACY_KEY) } catch {}
 }
-
 function readLocalSessions(): LocalSession[] {
   migrateLegacyIfNeeded()
   return readLS<LocalSession[]>(userBucketKey(), [])
 }
 function writeLocalSessions(arr: LocalSession[]) {
   writeLS(userBucketKey(), arr)
+  emitSessionsChanged()
 }
 
 // --------- Normalizadores ----------
@@ -99,17 +139,12 @@ function normalizeSessionFromApi(api: SessionApiShape): ExerciseSession {
     endedAt: api.completedAt,
   } as ExerciseSession
 }
-
 function normalizeSessionFromLocal(s: LocalSession): ExerciseSession {
   const durationMin =
     s.durationMin ??
     (s.endedAt
-      ? Math.max(
-          1,
-          Math.round((new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 60000)
-        )
+      ? Math.max(1, Math.round((new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 60000))
       : 0)
-
   return {
     _id: s._id,
     user: s.user,
@@ -124,7 +159,7 @@ function normalizeSessionFromLocal(s: LocalSession): ExerciseSession {
   } as ExerciseSession
 }
 
-// Endpoints (canónico + fallback “cognitive”)
+// Endpoints
 const LIST_PATHS = ['/api/sessions', '/api/cognitive/sessions']
 const CREATE_PATHS = ['/api/sessions', '/api/cognitive/sessions']
 const COMPLETE_PATHS = (id: string) => [
@@ -153,7 +188,7 @@ export async function fetchMySessions(): Promise<ExerciseSession[]> {
     return sessions.map(normalizeSessionFromApi)
   } catch (err) {
     console.warn('[fetchMySessions] backend falló:', err)
-    return [] // sin estáticos para no mezclar datos
+    return []
   }
 }
 
@@ -172,6 +207,7 @@ export async function startExerciseSession(
   }
 ): Promise<{ _id: string }> {
   if (USE_MOCK) {
+    ensureUserBucketId()
     const now = new Date()
     const id = `sess_${Math.random().toString(36).slice(2, 11)}`
     const iso = now.toISOString()
@@ -195,7 +231,7 @@ export async function startExerciseSession(
 
     const arr = readLocalSessions()
     arr.push(local)
-    writeLocalSessions(arr)
+    writeLocalSessions(arr) // emite mg:sessions-changed
     return { _id: id }
   }
 
@@ -226,6 +262,7 @@ export async function completeExercise(
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
   if (USE_MOCK || sessionId.startsWith('sess_')) {
+    ensureUserBucketId()
     const arr = readLocalSessions()
     const i = arr.findIndex(s => s._id === sessionId)
     const nowIso = new Date().toISOString()
@@ -246,7 +283,7 @@ export async function completeExercise(
         endedAt: nowIso,
         updatedAt: nowIso,
       }
-      writeLocalSessions(arr)
+      writeLocalSessions(arr) // emite mg:sessions-changed
     }
 
     return {
@@ -263,7 +300,7 @@ export async function completeExercise(
     try {
       return await postJSON<ExerciseResult>(p, data)
     } catch {
-      // probar siguiente path
+      // probar siguiente
     }
   }
 
