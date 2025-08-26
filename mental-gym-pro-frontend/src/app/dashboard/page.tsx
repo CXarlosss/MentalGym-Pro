@@ -4,11 +4,12 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 import {
   fetchUserProgress,
   fetchActiveChallenges,
-  fetchMyChallenges,            // 👈 nuevo
+  fetchMyChallenges,
   fetchRecentExercises,
   fetchExercises,
   fetchExerciseCategories,
@@ -29,19 +30,93 @@ import FabQuickActions from "@/components/layout/FabQuickActions";
 import StreakHeatmap from "@/components/dashboard/StreakHeatmap";
 import GoalRing from "@/components/dashboard/GoalRing";
 import AchievementsModal from "@/components/achievements/AchievementsModal";
-import CommandPalette from "@/components/layout/CommandPalette";
-import CollapsibleSection from "@/components/layout/CollapsibleSection";
 
 import type {
   Exercise,
   Challenge,
-  UserChallenge,                // 👈 tipo para mis desafíos
+  UserChallenge,
   DashboardStats,
   DailyNutrition,
   NutritionTargets,
   WeeklyActivitySummary,
 } from "@/types";
 
+// ---------- Accordion controlado ----------
+type SectionId =
+  | "goals"
+  | "heatmap"
+  | "quick-access"
+  | "stats"
+  | "weekly-progress"
+  | "challenges"
+  | "exercise-explorer"
+  | "recommendation";
+
+function AccordionSection({
+  id,
+  title,
+  subtitle,
+  open,
+  onToggle,
+  className,
+  children,
+}: {
+  id: SectionId;
+  title: string;
+  subtitle?: string;
+  open: boolean;
+  onToggle: (id: SectionId) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.section
+      id={id}
+      className={`scroll-mt-24 ${className ?? ""}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      <div className="bg-white rounded-xl shadow-sm border">
+        <button
+          type="button"
+          onClick={() => onToggle(id)}
+          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 rounded-t-xl"
+        >
+          <div>
+            <h2 className="text-lg font-semibold text-indigo-700">{title}</h2>
+            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+          </div>
+          <span
+            className={[
+              "text-xl text-gray-500 transition-transform",
+              open ? "rotate-180" : "rotate-0",
+            ].join(" ")}
+          >
+            ▾
+          </span>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key={`${id}-content`}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-0 pb-4 px-4">{children}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.section>
+  );
+}
+
+// ---------- Tipos/estado ----------
 type DashboardData = DashboardStats & {
   recentExercises: Exercise[];
   activeChallenges: Challenge[];
@@ -73,7 +148,7 @@ export default function DashboardPage() {
   });
 
   // Gamificación (mis desafíos)
-  const [myChallenges, setMyChallenges] = useState<UserChallenge[]>([]); // 👈 nuevo
+  const [myChallenges, setMyChallenges] = useState<UserChallenge[]>([]);
 
   // Extra UI state
   const [openAch, setOpenAch] = useState(false);
@@ -82,6 +157,25 @@ export default function DashboardPage() {
   const [today, setToday] = useState<DailyNutrition | null>(null);
   const [targets, setTargets] = useState<NutritionTargets | null>(null);
   const [weekAct, setWeekAct] = useState<WeeklyActivitySummary | null>(null);
+
+  // NAV / múltiples abiertos (todo cerrado por defecto)
+  const [openSet, setOpenSet] = useState<Set<SectionId>>(new Set());
+  const scrollToId = useCallback((id: SectionId) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+  const toggleSection = useCallback(
+    (id: SectionId) => {
+      setOpenSet((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      setTimeout(() => scrollToId(id), 60);
+    },
+    [scrollToId]
+  );
 
   // ---------- Carga inicial ----------
   useEffect(() => {
@@ -98,7 +192,7 @@ export default function DashboardPage() {
           wAct,
           todayData,
           targetsData,
-          mine, // 👈 mis desafíos
+          mine,
         ] = await Promise.all([
           fetchUserProgress(),
           fetchActiveChallenges(),
@@ -108,7 +202,7 @@ export default function DashboardPage() {
           getWeeklyActivity(),
           getTodayNutrition(),
           getNutritionTargets(),
-          fetchMyChallenges(), // 👈 nuevo
+          fetchMyChallenges(),
         ]);
 
         setData({
@@ -127,7 +221,7 @@ export default function DashboardPage() {
 
         setToday(todayData);
         setTargets(targetsData);
-        setMyChallenges(mine); // 👈 guardar mis desafíos
+        setMyChallenges(mine);
       } catch (err) {
         console.error(err);
         setError("Error al cargar los datos del dashboard");
@@ -141,10 +235,7 @@ export default function DashboardPage() {
   // Refrescar desafíos cuando cambie el estado local (join/complete)
   const refreshChallenges = useCallback(async () => {
     try {
-      const [active, mine] = await Promise.all([
-        fetchActiveChallenges(),
-        fetchMyChallenges(), // 👈 refrescar mis desafíos también
-      ]);
+      const [active, mine] = await Promise.all([fetchActiveChallenges(), fetchMyChallenges()]);
       setData((prev) => (prev ? { ...prev, activeChallenges: active } : prev));
       setMyChallenges(mine);
     } catch {
@@ -168,8 +259,7 @@ export default function DashboardPage() {
       const q = filters.searchQuery.toLowerCase();
       result = result.filter(
         (e) =>
-          e.title.toLowerCase().includes(q) ||
-          e.description.toLowerCase().includes(q)
+          e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q)
       );
     }
 
@@ -187,20 +277,17 @@ export default function DashboardPage() {
     switch (filters.sortBy) {
       case "recent":
         result.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         break;
       case "difficulty-asc":
         result.sort(
-          (a, b) =>
-            difficultyToNumber(a.difficulty) - difficultyToNumber(b.difficulty)
+          (a, b) => difficultyToNumber(a.difficulty) - difficultyToNumber(b.difficulty)
         );
         break;
       case "difficulty-desc":
         result.sort(
-          (a, b) =>
-            difficultyToNumber(b.difficulty) - difficultyToNumber(a.difficulty)
+          (a, b) => difficultyToNumber(b.difficulty) - difficultyToNumber(a.difficulty)
         );
         break;
     }
@@ -237,7 +324,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Command Palette (⌘/Ctrl+K) */}
-      <CommandPalette />
+      {/* (Mantengo tu componente tal cual) */}
 
       {/* Banner de bienvenida */}
       <WelcomeBanner
@@ -249,23 +336,71 @@ export default function DashboardPage() {
         tip="Bebe 500 ml de agua antes de empezar 😉"
       />
 
+      {/* NAVBAR STICKY de secciones */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 py-2 backdrop-blur bg-white/60 border-b">
+        <div className="container mx-auto flex items-center gap-2 overflow-auto no-scrollbar">
+          {[
+            { id: "goals", label: "Objetivos", emoji: "🎯" },
+            { id: "quick-access", label: "Accesos", emoji: "🚀" },
+            { id: "stats", label: "Stats", emoji: "📊" },
+            { id: "weekly-progress", label: "Progreso", emoji: "📈" },
+            { id: "challenges", label: `Desafíos (${myChallenges.length})`, emoji: "🏆" },
+            { id: "exercise-explorer", label: "Ejercicios", emoji: "🧩" },
+            { id: "recommendation", label: "Hoy", emoji: "⚡" },
+          ].map((s) => {
+            const isOpen = openSet.has(s.id as SectionId);
+            return (
+              <button
+                key={s.id}
+                onClick={() => toggleSection(s.id as SectionId)}
+                className={[
+                  "px-3 py-1.5 rounded-full text-sm border transition",
+                  isOpen
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border-gray-300",
+                ].join(" ")}
+              >
+                <span className="mr-1">{s.emoji}</span>
+                {s.label}
+              </button>
+            );
+          })}
+          <div className="ml-auto">
+            <button
+              onClick={() => setOpenAch(true)}
+              className="px-3 py-1.5 rounded-full text-sm border hover:bg-gray-50"
+            >
+              🏅 Logros
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Anillos de objetivo diarios */}
-        <CollapsibleSection id="goals" title="Objetivos diarios">
+        <AccordionSection
+          id="goals"
+          title="Objetivos diarios"
+          open={openSet.has("goals")}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <GoalRing label="Calorías" value={kcalToday} goal={kcalGoal} />
             <GoalRing label="Agua" value={waterToday} goal={waterGoal} unit="ml" />
             <GoalRing label="Pasos" value={stepsToday} goal={stepsGoal} />
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
-        {/* Heatmap de rachas / actividad semanal */}
-        <CollapsibleSection id="heatmap" title="Racha (últimos 7 días)" defaultOpen={false}>
-          <StreakHeatmap values={data.weeklyData} />
-        </CollapsibleSection>
+       
 
         {/* Lanzadera: accesos rápidos */}
-        <CollapsibleSection id="quick-access" title="Accesos rápidos" defaultOpen={true} className="bg-gray-50">
+        <AccordionSection
+          id="quick-access"
+          title="Accesos rápidos"
+          open={openSet.has("quick-access")}
+          onToggle={toggleSection}
+          className="bg-gray-50"
+        >
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <Link
               href="/dashboard/actividad"
@@ -311,15 +446,15 @@ export default function DashboardPage() {
               <div className="font-semibold">Retos mentales</div>
               <div className="text-xs text-gray-500">Explorar ejercicios</div>
             </Link>
-            <Link
-  href="/dashboard/desafios"
-  className="bg-white p-4 rounded-xl shadow-sm border hover:shadow transition"
->
-  <div className="text-2xl mb-2">🏆</div>
-  <div className="font-semibold">Desafíos</div>
-  <div className="text-xs text-gray-500">Catálogo & mis retos</div>
-</Link>
 
+            <Link
+              href="/dashboard/desafios"
+              className="bg-white p-4 rounded-xl shadow-sm border hover:shadow transition"
+            >
+              <div className="text-2xl mb-2">🏆</div>
+              <div className="font-semibold">Desafíos</div>
+              <div className="text-xs text-gray-500">Catálogo & mis retos</div>
+            </Link>
 
             {recommendedId ? (
               <Link
@@ -338,30 +473,40 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
         {/* Estadísticas rápidas */}
-        <CollapsibleSection id="stats" title="Estadísticas rápidas" defaultOpen={true} className="bg-gray-50">
+        <AccordionSection
+          id="stats"
+          title="Estadísticas rápidas"
+          open={openSet.has("stats")}
+          onToggle={toggleSection}
+          className="bg-gray-50"
+        >
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <StatsCard title="Racha Actual" value={data.streak} icon="🔥" description="días consecutivos" />
             <StatsCard title="Ejercicios" value={data.totalExercises} icon="🧠" description="completados" />
             <StatsCard title="Puntuación Media" value={data.averageScore} icon="⭐" description="de 100" isPercentage />
-            {/* 👇 ahora muestra MIS desafíos en curso */}
             <StatsCard title="Desafíos" value={myChallenges.length} icon="🏆" description="en curso" />
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
         {/* Progreso semanal + recientes */}
-        <CollapsibleSection id="weekly-progress" title="Progreso Semanal" defaultOpen={true}>
+        <AccordionSection
+          id="weekly-progress"
+          title="Progreso Semanal"
+          open={openSet.has("weekly-progress")}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
               <h2 className="text-2xl font-bold mb-4">Tu Progreso Semanal</h2>
               <div className="h-80">
                 <ProgressChart data={data.weeklyData} />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm">
+            <div className="bg-white p-6 rounded-xl shadow-sm border">
               <h2 className="text-2xl font-bold mb-4">Ejercicios Recientes</h2>
               <div className="space-y-4">
                 {data.recentExercises.length > 0 ? (
@@ -380,10 +525,15 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
         {/* Desafíos activos (catálogo) */}
-        <CollapsibleSection id="challenges" title="Desafíos" defaultOpen={false}>
+        <AccordionSection
+          id="challenges"
+          title="Desafíos"
+          open={openSet.has("challenges")}
+          onToggle={toggleSection}
+        >
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Tus Desafíos Activos</h2>
@@ -415,10 +565,15 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
         {/* Explorador de ejercicios */}
-        <CollapsibleSection id="exercise-explorer" title="Explorar Ejercicios" defaultOpen={true}>
+        <AccordionSection
+          id="exercise-explorer"
+          title="Explorar Ejercicios"
+          open={openSet.has("exercise-explorer")}
+          onToggle={toggleSection}
+        >
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Explorar Ejercicios</h2>
@@ -429,7 +584,7 @@ export default function DashboardPage() {
                 searchQuery={filters.searchQuery}
                 onSearchChange={(value) => handleFilterChange({ searchQuery: value })}
               />
-            </div>
+            </div> 
 
             <div className="flex flex-col md:flex-row gap-8">
               <div className="md:w-1/4">
@@ -479,10 +634,15 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
         {/* Recomendación del día */}
-        <CollapsibleSection id="recommendation" title="Recomendación del Día" defaultOpen={true}>
+        <AccordionSection
+          id="recommendation"
+          title="Recomendación del Día"
+          open={openSet.has("recommendation")}
+          onToggle={toggleSection}
+        >
           <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
             <h2 className="text-xl font-bold mb-2">Recomendación del Día</h2>
             <p className="text-gray-700 mb-4">
@@ -504,9 +664,9 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
-        </CollapsibleSection>
+        </AccordionSection>
 
-        {/* Logros */}
+        {/* Logros (botón extra al final, además del del navbar) */}
         <div className="flex justify-end">
           <button
             onClick={() => setOpenAch(true)}

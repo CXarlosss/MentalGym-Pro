@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -27,69 +27,61 @@ import type {
   WeeklyNutritionSummary,
 } from '@/types'
 
-/* ==========
-   Componente: Sección/Accordion mejorado
-   ========== */
-function Section({
+type SectionId = 'resumen' | 'agua' | 'diario' | 'objetivos' | 'db' | 'custom' | 'insights'
+
+/* ========== Accordion controlado (abre/cierra desde fuera) ========== */
+function AccordionSection({
+  id,
   title,
   subtitle,
-  defaultOpen = true,
+  open,
+  onToggle,
   children,
 }: {
+  id: SectionId
   title: string
   subtitle?: string
-  defaultOpen?: boolean
+  open: boolean
+  onToggle: (id: SectionId) => void
   children: React.ReactNode
 }) {
-  const [open, setOpen] = useState(defaultOpen)
-
   return (
     <motion.div
+      id={id}
+      className="scroll-mt-24"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <Card className="hover:shadow-md transition-shadow duration-300">
-        <motion.button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 rounded-t-lg transition-colors"
-          whileTap={{ scale: 0.98 }}
-        >
-          <div>
-            <h3 className="text-base font-semibold text-indigo-700">{title}</h3>
-            {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
-          </div>
-          <motion.div
-            animate={{ rotate: open ? 0 : 180 }}
-            transition={{ duration: 0.2 }}
-            className="text-gray-500"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <CardHeader role="button" onClick={() => onToggle(id)} className="cursor-pointer select-none">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-indigo-700">{title}</CardTitle>
+              {subtitle && <CardDescription>{subtitle}</CardDescription>}
+            </div>
+            <span
+              className={[
+                'text-xl text-gray-500 transition-transform',
+                open ? 'rotate-180' : 'rotate-0',
+              ].join(' ')}
             >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </motion.div>
-        </motion.button>
+              ▾
+            </span>
+          </div>
+        </CardHeader>
 
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {open && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
+              key={`${id}-content`}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden"
             >
-              <CardContent className="pt-0 pb-4 px-4">{children}</CardContent>
+              <CardContent className="pt-0">{children}</CardContent>
             </motion.div>
           )}
         </AnimatePresence>
@@ -141,11 +133,41 @@ export default function HabitosSaludablesPage() {
     tags: [],
   })
 
-  // Hook para cargar datos iniciales
+  // ---- NAV/Accordion: todo cerrado por defecto ----
+  const [openSec, setOpenSec] = useState<SectionId | null>(null)
+  const [activeSec, setActiveSec] = useState<SectionId | null>(null)
+
+  const scrollToId = useCallback((id: SectionId) => {
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const toggleSection = (id: SectionId) => {
+    setOpenSec(prev => (prev === id ? null : id))
+    setActiveSec(id)
+    setTimeout(() => scrollToId(id), 60)
+  }
+
+  // Secciones visibles (oculta Objetivos si no hay targets; Insights si no hay week)
+  const sections = useMemo(
+    () =>
+      ([
+        { id: 'resumen', label: 'Resumen', emoji: '📊' },
+        { id: 'agua', label: 'Agua', emoji: '💧' },
+        { id: 'diario', label: 'Alimentación', emoji: '🍽️' },
+        targets ? { id: 'objetivos', label: 'Objetivos', emoji: '🎯' } : null,
+        { id: 'db', label: 'Base de datos', emoji: '📚' },
+        { id: 'custom', label: 'Personalizado', emoji: '➕' },
+        week ? { id: 'insights', label: 'Insights', emoji: '🔎' } : null,
+      ].filter(Boolean) as Array<{ id: SectionId; label: string; emoji: string }>),
+    [targets, week]
+  )
+
+  // ---- carga inicial ----
   useEffect(() => {
     const fetchData = async () => {
       try {
-        seedFoodDbOnce() // Para el modo local
+        seedFoodDbOnce()
         const [foodDb, todayData, weekData, favsData, targetsData] = await Promise.all([
           getFoodDb(),
           getTodayNutrition(),
@@ -167,7 +189,7 @@ export default function HabitosSaludablesPage() {
     fetchData()
   }, [])
 
-  // Refrescar todos los datos
+  // Refrescar datos
   const refreshData = useCallback(async () => {
     setToday(await getTodayNutrition())
     setWeek(await getWeekNutrition())
@@ -175,17 +197,16 @@ export default function HabitosSaludablesPage() {
   }, [])
 
   const suggestions = useMemo(() => {
-    if (!db) return []
     const q = query.trim().toLowerCase()
     const base = db.slice().sort((a, b) => a.name.localeCompare(b.name))
     if (!q) return base
-    return base.filter((f) => f.name.toLowerCase().includes(q))
+    return base.filter(f => f.name.toLowerCase().includes(q))
   }, [db, query])
 
   const favSuggestions = useMemo(() => {
-    if (!db || !favs) return []
-    const favNamesSet = new Set(favs.map((n) => n.toLowerCase()))
-    return db.filter((f) => favNamesSet.has(f.name.toLowerCase()))
+    if (!favs) return []
+    const favNamesSet = new Set(favs.map(n => n.toLowerCase()))
+    return db.filter(f => favNamesSet.has(f.name.toLowerCase()))
   }, [db, favs])
 
   async function handleAddMeal() {
@@ -194,7 +215,7 @@ export default function HabitosSaludablesPage() {
       return
     }
     try {
-      await addMealToday({ type, foodName: foodName.trim(), amount: amount })
+      await addMealToday({ type, foodName: foodName.trim(), amount })
       await refreshData()
       setFoodName('')
       setAmount(100)
@@ -237,7 +258,7 @@ export default function HabitosSaludablesPage() {
       alert(e instanceof Error ? e.message : 'No se pudo añadir el alimento')
     }
   }
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -271,8 +292,35 @@ export default function HabitosSaludablesPage() {
         </motion.div>
       </motion.div>
 
+      {/* NAVBAR STICKY con todos los apartados (todo cerrado al inicio) */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 py-2 backdrop-blur bg-white/60 border-b">
+        <div className="flex items-center gap-2 overflow-auto no-scrollbar">
+          {sections.map(s => (
+            <button
+              key={s.id}
+              onClick={() => toggleSection(s.id)}
+              className={[
+                'px-3 py-1.5 rounded-full text-sm border transition',
+                activeSec === s.id
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300',
+              ].join(' ')}
+            >
+              <span className="mr-1">{s.emoji}</span>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Resumen de hoy */}
-      <Section title="Resumen de hoy" subtitle="Calorías, macros y agua de la jornada">
+      <AccordionSection
+        id="resumen"
+        title="Resumen de hoy"
+        subtitle="Calorías, macros y agua de la jornada"
+        open={openSec === 'resumen'}
+        onToggle={toggleSection}
+      >
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { title: 'Kcal (hoy)', value: today?.kcal ?? 0 },
@@ -285,18 +333,24 @@ export default function HabitosSaludablesPage() {
               key={kpi.title}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 * index }}
+              transition={{ delay: 0.06 * index }}
             >
               <Kpi title={kpi.title} value={kpi.value} />
             </motion.div>
           ))}
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Agua */}
-      <Section title="Agua" subtitle="Registra tu ingesta de agua" defaultOpen={true}>
+      <AccordionSection
+        id="agua"
+        title="Agua"
+        subtitle="Registra tu ingesta de agua"
+        open={openSec === 'agua'}
+        onToggle={toggleSection}
+      >
         <div className="flex flex-wrap gap-2 items-center">
-          {[250, 500, 750, 1000].map((ml) => (
+          {[250, 500, 750, 1000].map(ml => (
             <motion.div key={ml} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 onClick={() => handleAddWater(ml)}
@@ -306,14 +360,18 @@ export default function HabitosSaludablesPage() {
               </Button>
             </motion.div>
           ))}
-          <div className="text-sm text-gray-500 ml-auto">
-            Objetivo: {targets?.waterMl ?? 0} ml
-          </div>
+          <div className="text-sm text-gray-500 ml-auto">Objetivo: {targets?.waterMl ?? 0} ml</div>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Alimentación del día */}
-      <Section title="Alimentación del día" subtitle="Registra alimentos y revisa tu diario">
+      <AccordionSection
+        id="diario"
+        title="Alimentación del día"
+        subtitle="Registra alimentos y revisa tu diario"
+        open={openSec === 'diario'}
+        onToggle={toggleSection}
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
             <div className="md:col-span-2">
@@ -323,7 +381,7 @@ export default function HabitosSaludablesPage() {
               <motion.select
                 id="meal-type"
                 value={type}
-                onChange={(e) => setType(e.target.value as MealType)}
+                onChange={e => setType(e.target.value as MealType)}
                 className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 whileFocus={{ scale: 1.02 }}
               >
@@ -342,14 +400,14 @@ export default function HabitosSaludablesPage() {
                 id="food-name"
                 list="food-list"
                 value={foodName}
-                onChange={(e) => setFoodName(e.target.value)}
-                onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+                onChange={e => setFoodName(e.target.value)}
+                onInput={e => setQuery((e.target as HTMLInputElement).value)}
                 placeholder="Ej. Avena, Manzana…"
                 className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 whileFocus={{ scale: 1.02 }}
               />
               <datalist id="food-list">
-                {suggestions.slice(0, 30).map((f) => (
+                {suggestions.slice(0, 30).map(f => (
                   <option key={f._id} value={f.name} />
                 ))}
               </datalist>
@@ -357,7 +415,7 @@ export default function HabitosSaludablesPage() {
               {favs && favSuggestions.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2 text-sm">
                   <span className="text-gray-500">Favoritos:</span>
-                  {favSuggestions.map((f) => (
+                  {favSuggestions.map(f => (
                     <motion.button
                       key={f._id}
                       className="px-2 py-1 border rounded-md hover:bg-gray-50 text-sm"
@@ -382,7 +440,7 @@ export default function HabitosSaludablesPage() {
                 type="number"
                 min={0}
                 value={amount}
-                onChange={(e) => setAmount(parseInt(e.target.value || '0', 10))}
+                onChange={e => setAmount(parseInt(e.target.value || '0', 10))}
                 className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 whileFocus={{ scale: 1.02 }}
               />
@@ -437,7 +495,7 @@ export default function HabitosSaludablesPage() {
                       {today.meals
                         .slice()
                         .reverse()
-                        .map((m) => (
+                        .map(m => (
                           <motion.tr
                             key={m._id}
                             className="border-b last:border-0 hover:bg-gray-50"
@@ -475,11 +533,17 @@ export default function HabitosSaludablesPage() {
             )}
           </div>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Objetivos diarios */}
       {targets && (
-        <Section title="Objetivos diarios" subtitle="Personaliza tus metas">
+        <AccordionSection
+          id="objetivos"
+          title="Objetivos diarios"
+          subtitle="Personaliza tus metas"
+          open={openSec === 'objetivos'}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               ['kcal', 'Kcal'],
@@ -498,7 +562,7 @@ export default function HabitosSaludablesPage() {
                     type="number"
                     className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     value={targets[key as keyof NutritionTargets]}
-                    onChange={(e) =>
+                    onChange={e =>
                       setTargets({ ...targets, [key]: parseInt(e.target.value || '0', 10) })
                     }
                   />
@@ -516,16 +580,22 @@ export default function HabitosSaludablesPage() {
               </Button>
             </motion.div>
           </div>
-        </Section>
+        </AccordionSection>
       )}
 
       {/* Base de datos de alimentos */}
-      <Section title="Base de datos de alimentos" subtitle="Busca y marca favoritos">
+      <AccordionSection
+        id="db"
+        title="Base de datos de alimentos"
+        subtitle="Busca y marca favoritos"
+        open={openSec === 'db'}
+        onToggle={toggleSection}
+      >
         <div className="space-y-4">
           <motion.input
             placeholder="Buscar alimento…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             whileFocus={{ scale: 1.02 }}
           />
@@ -544,7 +614,7 @@ export default function HabitosSaludablesPage() {
               </thead>
               <tbody>
                 <AnimatePresence mode="popLayout">
-                  {suggestions.map((f) => (
+                  {suggestions.map(f => (
                     <motion.tr
                       key={f._id}
                       className="border-b last:border-0 hover:bg-gray-50"
@@ -579,10 +649,16 @@ export default function HabitosSaludablesPage() {
             </table>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Agregar alimento personalizado */}
-      <Section title="Agregar alimento personalizado" subtitle="Define valores por 100g o por unidad">
+      <AccordionSection
+        id="custom"
+        title="Agregar alimento personalizado"
+        subtitle="Define valores por 100g o por unidad"
+        open={openSec === 'custom'}
+        onToggle={toggleSection}
+      >
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
           <div className="md:col-span-2">
             <label htmlFor="food-name-new" className="text-sm text-gray-600">
@@ -592,7 +668,7 @@ export default function HabitosSaludablesPage() {
               id="food-name-new"
               className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               value={newFood.name}
-              onChange={(e) => setNewFood({ ...newFood, name: e.target.value })}
+              onChange={e => setNewFood({ ...newFood, name: e.target.value })}
               whileFocus={{ scale: 1.02 }}
             />
           </div>
@@ -604,7 +680,7 @@ export default function HabitosSaludablesPage() {
               id="food-unit-new"
               className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               value={newFood.unit}
-              onChange={(e) =>
+              onChange={e =>
                 setNewFood({ ...newFood, unit: e.target.value as '100g' | 'unidad' })
               }
               whileFocus={{ scale: 1.02 }}
@@ -628,12 +704,12 @@ export default function HabitosSaludablesPage() {
                   id={`food-${key}-new`}
                   type="number"
                   className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  value={newFood[key as keyof Omit<FoodItem, '_id'>]}
-                  onChange={(e) =>
+                  value={newFood[key as keyof Omit<FoodItem, '_id'>] as number | string}
+                  onChange={e =>
                     setNewFood({
                       ...newFood,
                       [key]: parseFloat(e.target.value || '0'),
-                    })
+                    } as typeof newFood)
                   }
                 />
               </div>
@@ -650,27 +726,17 @@ export default function HabitosSaludablesPage() {
             </Button>
           </motion.div>
         </div>
-      </Section>
-
-      {/* Pasos diarios */}
-      <Section title="Pasos diarios" subtitle="Consulta y registra tu actividad">
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-gray-600">
-            Gestiona tus pasos y actividad semanal desde la sección de Actividad.
-          </p>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link href="/dashboard/actividad">
-              <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-                Ir a Actividad
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </Section>
+      </AccordionSection>
 
       {/* Insights */}
       {week && (
-        <Section title="Insights" subtitle="Resumen de los últimos 7 días" defaultOpen={false}>
+        <AccordionSection
+          id="insights"
+          title="Insights"
+          subtitle="Resumen de los últimos 7 días"
+          open={openSec === 'insights'}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
             {[
               { title: 'Kcal medias', value: Math.round(week.avg.kcal ?? 0) },
@@ -683,7 +749,7 @@ export default function HabitosSaludablesPage() {
                 key={kpi.title}
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1 * index }}
+                transition={{ delay: 0.06 * index }}
               >
                 <Kpi title={kpi.title} value={kpi.value} />
               </motion.div>
@@ -704,7 +770,7 @@ export default function HabitosSaludablesPage() {
               </thead>
               <tbody>
                 <AnimatePresence>
-                  {week.days.map((d) => (
+                  {week.days.map(d => (
                     <motion.tr
                       key={d.date}
                       className="border-b last:border-0 hover:bg-gray-50"
@@ -724,7 +790,7 @@ export default function HabitosSaludablesPage() {
               </tbody>
             </table>
           </div>
-        </Section>
+        </AccordionSection>
       )}
     </div>
   )
