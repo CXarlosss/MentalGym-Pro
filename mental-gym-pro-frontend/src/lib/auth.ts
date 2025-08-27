@@ -14,7 +14,7 @@ export const registerUser = async (data: {
   email: string;
   password: string;
 }): Promise<AuthResponse> => {
-  const response = await fetch(`${API_URL}/api/auth/register`, {
+  const response = await fetch(`${API_URL}/auth/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -36,7 +36,7 @@ export const loginUser = async (data: {
   email: string;
   password: string;
 }): Promise<AuthResponse> => {
-  const response = await fetch(`${API_URL}/api/auth/login`, {
+  const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ export const loginUser = async (data: {
 };
 
 export const logoutUser = async (token: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/api/auth/logout`, {
+  const response = await fetch(`${API_URL}/auth/logout`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -67,7 +67,7 @@ export const logoutUser = async (token: string): Promise<void> => {
 };
 
 export const getCurrentUser = async (token: string): Promise<User> => { // ✅ Use the global User type directly
-  const response = await fetch(`${API_URL}/api/auth/me`, {
+  const response = await fetch(`${API_URL}/auth/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
