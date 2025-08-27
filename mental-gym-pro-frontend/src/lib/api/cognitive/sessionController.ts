@@ -1,4 +1,4 @@
-// src/lib/api/cognitive/sessionController.ts
+// src/lib/cognitive/sessionController.ts
 import type { ExerciseSession, ExerciseResult } from '@/types'
 import { USE_MOCK, getJSON, postJSON } from '../config'
 
@@ -160,11 +160,11 @@ function normalizeSessionFromLocal(s: LocalSession): ExerciseSession {
 }
 
 // Endpoints
-const LIST_PATHS = ['/api/sessions', '/api/cognitive/sessions']
-const CREATE_PATHS = ['/api/sessions', '/api/cognitive/sessions']
+const LIST_PATHS = ['/sessions', '/cognitive/sessions']
+const CREATE_PATHS = ['/sessions', '/cognitive/sessions']
 const COMPLETE_PATHS = (id: string) => [
-  `/api/sessions/${id}/complete`,
-  `/api/cognitive/sessions/${id}/complete`,
+  `/sessions/${id}/complete`,
+  `/cognitive/sessions/${id}/complete`,
 ]
 
 // ===============================

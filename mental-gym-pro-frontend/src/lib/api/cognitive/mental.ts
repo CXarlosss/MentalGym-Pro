@@ -1,4 +1,4 @@
-// src/lib/api/cognitive/mental.ts
+// src/lib/cognitive/mental.ts
 import { USE_MOCK, getJSON, postJSON, patchJSON, del, get } from "../config";
 
 // ===============================
@@ -103,7 +103,7 @@ const normalizeChallenge = (c: MentalChallenge): MentalChallenge => {
   };
 };
 
-const BASE_PATHS = ["/api/mental", "/api/cognitive/mental"];
+const BASE_PATHS = ["/mental", "/cognitive/mental"];
 const LIST_PATHS = BASE_PATHS;
 const ITEM_PATHS = (id: string) => BASE_PATHS.map((p) => `${p}/${id}`);
 const RANDOM_PATHS = BASE_PATHS.map((p) => `${p}/random`);
@@ -310,5 +310,5 @@ export async function deleteMentalChallenge(
 //     Mis sesiones (opcional)
 // ===============================
 export async function fetchMyMentalAttempts() {
-  return get<MentalAttempt[]>("/api/mental-attempts");
+  return get<MentalAttempt[]>("/mental-attempts");
 }

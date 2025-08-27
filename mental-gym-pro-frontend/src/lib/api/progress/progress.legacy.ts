@@ -44,9 +44,8 @@ export async function fetchUserProgress(): Promise<UserProgress> {
   try {
     const paths = [
       '/stats/me',
-      '/api/stats/me',
       // si más adelante expones uno específico de gamificación:
-      // '/api/gamification/progress/me',
+      // '/gamification/progress/me',
     ];
     return await getJSON<UserProgress>(paths, { headers: authHeader() });
   } catch (e) {
@@ -64,9 +63,9 @@ export async function fetchActiveChallenges(): Promise<Challenge[]> {
   try {
     const paths = [
       // nuevo namespace
-      '/api/gamification/challenges/active',
+      '/gamification/challenges/active',
       // compat que dejaste en el backend
-      '/api/challenges/active',
+      '/challenges/active',
       // por si el front antiguo llamaba sin /api
       '/challenges/active',
     ];

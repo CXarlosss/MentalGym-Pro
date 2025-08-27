@@ -1,4 +1,4 @@
-// src/lib/api/gamification/gamification.ts
+// src/lib/gamification/gamification.ts
 import type { Challenge, UserChallenge, Badge, UserBadge } from '@/types';
 import { USE_MOCK, get, postJSON, patchJSON, del, getJSON } from '../config';
 
@@ -102,7 +102,7 @@ export async function fetchActiveChallenges(): Promise<Challenge[]> {
     return FALLBACK_CHALLENGES;
   }
   return getJSON<Challenge[]>(
-    ['/api/gamification/challenges/active', '/api/challenges/active'],
+    ['/gamification/challenges/active', '/challenges/active'],
     { headers: authHeader() }
   );
 }
@@ -111,7 +111,7 @@ export async function fetchAllChallenges(): Promise<Challenge[]> {
   if (USE_MOCK) {
     return FALLBACK_CHALLENGES;
   }
-  return get<Challenge[]>('/api/gamification/challenges', { headers: authHeader() });
+  return get<Challenge[]>('/gamification/challenges', { headers: authHeader() });
 }
 
 export async function fetchChallengeById(id: string): Promise<Challenge> {
@@ -120,7 +120,7 @@ export async function fetchChallengeById(id: string): Promise<Challenge> {
     if (!c) throw new Error('Desafío no encontrado (mock)');
     return c;
   }
-  return get<Challenge>(`/api/gamification/challenges/${id}`, { headers: authHeader() });
+  return get<Challenge>(`/gamification/challenges/${id}`, { headers: authHeader() });
 }
 
 // =====================================================
@@ -146,7 +146,7 @@ export async function createChallenge(body: Partial<Challenge>): Promise<Challen
     emitChallengesChanged();
     return newCh;
   }
-  return postJSON<Challenge>('/api/gamification/challenges', body, { headers: authHeader() });
+  return postJSON<Challenge>('/gamification/challenges', body, { headers: authHeader() });
 }
 
 export async function updateChallenge(id: string, body: Partial<Challenge>): Promise<Challenge> {
@@ -162,7 +162,7 @@ export async function updateChallenge(id: string, body: Partial<Challenge>): Pro
     emitChallengesChanged();
     return updatedCh;
   }
-  return patchJSON<Challenge>(`/api/gamification/challenges/${id}`, body, { headers: authHeader() });
+  return patchJSON<Challenge>(`/gamification/challenges/${id}`, body, { headers: authHeader() });
 }
 
 export async function deleteChallenge(id: string): Promise<{ ok: boolean }> {
@@ -172,7 +172,7 @@ export async function deleteChallenge(id: string): Promise<{ ok: boolean }> {
     emitChallengesChanged();
     return { ok: true };
   }
-  return del<{ ok: boolean }>(`/api/gamification/challenges/${id}`, { headers: authHeader() });
+  return del<{ ok: boolean }>(`/gamification/challenges/${id}`, { headers: authHeader() });
 }
 
 // =====================================================
@@ -199,7 +199,7 @@ export async function joinChallenge(id: string): Promise<UserChallenge> {
     } as UserChallenge;
     return uc;
   }
-  return postJSON<UserChallenge>(`/api/gamification/challenges/${id}/join`, {}, { headers: authHeader() });
+  return postJSON<UserChallenge>(`/gamification/challenges/${id}/join`, {}, { headers: authHeader() });
 }
 
 export async function updateMyChallengeProgress(
@@ -227,7 +227,7 @@ export async function updateMyChallengeProgress(
     } as UserChallenge;
     return uc;
   }
-  return patchJSON<UserChallenge>(`/api/gamification/challenges/${id}/progress`, body, { headers: authHeader() });
+  return patchJSON<UserChallenge>(`/gamification/challenges/${id}/progress`, body, { headers: authHeader() });
 }
 
 export async function fetchMyChallenges(): Promise<UserChallenge[]> {
@@ -254,7 +254,7 @@ export async function fetchMyChallenges(): Promise<UserChallenge[]> {
 
     return list;
   }
-  return get<UserChallenge[]>('/api/gamification/my-challenges', { headers: authHeader() });
+  return get<UserChallenge[]>('/gamification/my-challenges', { headers: authHeader() });
 }
 
 // =====================================================
@@ -268,7 +268,7 @@ export async function fetchBadges(): Promise<Badge[]> {
   if (USE_MOCK) {
     return FALLBACK_BADGES;
   }
-  return get<Badge[]>('/api/gamification/badges', { headers: authHeader() });
+  return get<Badge[]>('/gamification/badges', { headers: authHeader() });
 }
 
 export async function createBadge(
@@ -281,7 +281,7 @@ export async function createBadge(
     }
     return { code: body.code, title: body.title } as Badge;
   }
-  return postJSON<Badge>('/api/gamification/badges', body, { headers: authHeader() });
+  return postJSON<Badge>('/gamification/badges', body, { headers: authHeader() });
 }
 
 export async function updateBadge(id: string, body: Partial<Badge>): Promise<Badge> {
@@ -292,7 +292,7 @@ export async function updateBadge(id: string, body: Partial<Badge>): Promise<Bad
     FALLBACK_BADGES[i] = updated;
     return updated;
   }
-  return patchJSON<Badge>(`/api/gamification/badges/${id}`, body, { headers: authHeader() });
+  return patchJSON<Badge>(`/gamification/badges/${id}`, body, { headers: authHeader() });
 }
 
 export async function deleteBadge(id: string): Promise<{ ok: boolean }> {
@@ -301,7 +301,7 @@ export async function deleteBadge(id: string): Promise<{ ok: boolean }> {
     if (i !== -1) FALLBACK_BADGES.splice(i, 1);
     return { ok: true };
   }
-  return del<{ ok: boolean }>(`/api/gamification/badges/${id}`, { headers: authHeader() });
+  return del<{ ok: boolean }>(`/gamification/badges/${id}`, { headers: authHeader() });
 }
 
 export async function fetchMyBadges(): Promise<UserBadge[]> {
@@ -320,7 +320,7 @@ export async function fetchMyBadges(): Promise<UserBadge[]> {
     });
     return mine;
   }
-  return get<UserBadge[]>('/api/gamification/user-badges', { headers: authHeader() });
+  return get<UserBadge[]>('/gamification/user-badges', { headers: authHeader() });
 }
 
 export async function unlockBadgeForMe(badgeId: string): Promise<UserBadge> {
@@ -338,5 +338,5 @@ export async function unlockBadgeForMe(badgeId: string): Promise<UserBadge> {
     } as UserBadge;
     return ub;
   }
-  return postJSON<UserBadge>(`/api/gamification/user-badges/${badgeId}/unlock`, {}, { headers: authHeader() });
+  return postJSON<UserBadge>(`/gamification/user-badges/${badgeId}/unlock`, {}, { headers: authHeader() });
 }

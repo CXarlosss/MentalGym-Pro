@@ -1,4 +1,4 @@
-// src/lib/api/config.ts
+// src/lib/config.ts
 
 // ===============================
 //     Configuración y flags
@@ -90,17 +90,17 @@ function stripSameOrigin(u: string): string {
   return u; // URL absoluta de otro origen -> no tocar
 }
 
-// En dev, fuerza /api/... a todo lo que sea same-origin o relativo
+// En dev, fuerza /... a todo lo que sea same-origin o relativo
 function normalizeDevPath(path: string): string {
   const p0 = path.startsWith('/') ? path : `/${path}`;
-  if (p0.startsWith('/api/')) return p0;
+  if (p0.startsWith('/')) return p0;
   return `/api${p0}`;
 }
 
 function buildPath(path: string): string {
   const stripped = stripSameOrigin(path);
 
-  // Dev: same-origin -> siempre pasa por /api/...
+  // Dev: same-origin -> siempre pasa por /...
   if (!API) {
     if (/^https?:\/\//i.test(stripped)) return stripped; // absoluta cross-origin
     return normalizeDevPath(stripped);

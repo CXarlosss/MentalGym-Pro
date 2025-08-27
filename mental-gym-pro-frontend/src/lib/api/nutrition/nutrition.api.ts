@@ -1,4 +1,4 @@
-// src/lib/api/nutrition.api.ts
+// src/lib/nutrition.api.ts
 import type {
   FoodItem,
   MealEntry,
@@ -58,23 +58,23 @@ async function http<T>(url: string, init?: RequestInit): Promise<T> {
 //            FOODS
 // ===============================
 
-/** GET /api/nutrition/foods?q=... */
+/** GET /nutrition/foods?q=... */
 export async function listFoods(q?: string): Promise<FoodItem[]> {
-  const url = joinURL(API, '/api/nutrition/foods') + qs({ q });
+  const url = joinURL(API, '/nutrition/foods') + qs({ q });
   return http<FoodItem[]>(url, { headers: withAuth() });
 }
 
-/** GET /api/nutrition/foods/:id */
+/** GET /nutrition/foods/:id */
 export async function getFoodById(id: string): Promise<FoodItem> {
-  const url = joinURL(API, `/api/nutrition/foods/${encodeURIComponent(id)}`);
+  const url = joinURL(API, `/nutrition/foods/${encodeURIComponent(id)}`);
   return http<FoodItem>(url, { headers: withAuth() });
 }
 
-/** POST /api/nutrition/foods (admin/editor) */
+/** POST /nutrition/foods (admin/editor) */
 export async function createFood(
   body: Omit<FoodItem, '_id' | 'createdAt' | 'updatedAt'>
 ) {
-  const url = joinURL(API, '/api/nutrition/foods');
+  const url = joinURL(API, '/nutrition/foods');
   return http<FoodItem>(url, {
     method: 'POST',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -82,9 +82,9 @@ export async function createFood(
   });
 }
 
-/** PATCH /api/nutrition/foods/:id (admin/editor) */
+/** PATCH /nutrition/foods/:id (admin/editor) */
 export async function updateFood(id: string, patch: Partial<FoodItem>) {
-  const url = joinURL(API, `/api/nutrition/foods/${encodeURIComponent(id)}`);
+  const url = joinURL(API, `/nutrition/foods/${encodeURIComponent(id)}`);
   return http<FoodItem>(url, {
     method: 'PATCH',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -92,9 +92,9 @@ export async function updateFood(id: string, patch: Partial<FoodItem>) {
   });
 }
 
-/** DELETE /api/nutrition/foods/:id (admin/editor) */
+/** DELETE /nutrition/foods/:id (admin/editor) */
 export async function deleteFood(id: string) {
-  const url = joinURL(API, `/api/nutrition/foods/${encodeURIComponent(id)}`);
+  const url = joinURL(API, `/nutrition/foods/${encodeURIComponent(id)}`);
   return http<{ ok: boolean }>(url, {
     method: 'DELETE',
     headers: withAuth(),
@@ -105,13 +105,13 @@ export async function deleteFood(id: string) {
 //            MEALS
 // ===============================
 
-/** GET /api/nutrition/meals?day=YYYY-MM-DD | from=&to= */
+/** GET /nutrition/meals?day=YYYY-MM-DD | from=&to= */
 export async function listMeals(params?: {
   day?: string;
   from?: string;
   to?: string;
 }): Promise<MealEntry[]> {
-  const url = joinURL(API, '/api/nutrition/meals') + qs({
+  const url = joinURL(API, '/nutrition/meals') + qs({
     day: params?.day,
     from: params?.from,
     to: params?.to,
@@ -119,7 +119,7 @@ export async function listMeals(params?: {
   return http<MealEntry[]>(url, { headers: withAuth() });
 }
 
-/** POST /api/nutrition/meals */
+/** POST /nutrition/meals */
 export async function createMeal(body: {
   type: MealEntry['type'];
   foodId?: string;
@@ -128,7 +128,7 @@ export async function createMeal(body: {
   date?: string; // YYYY-MM-DD
   kcal?: number; protein?: number; carbs?: number; fat?: number; // si es manual
 }) {
-  const url = joinURL(API, '/api/nutrition/meals');
+  const url = joinURL(API, '/nutrition/meals');
   return http<MealEntry>(url, {
     method: 'POST',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -136,12 +136,12 @@ export async function createMeal(body: {
   });
 }
 
-/** PATCH /api/nutrition/meals/:id */
+/** PATCH /nutrition/meals/:id */
 export async function updateMeal(
   id: string,
   patch: Partial<MealEntry> & { foodId?: string; amount?: number }
 ) {
-  const url = joinURL(API, `/api/nutrition/meals/${encodeURIComponent(id)}`);
+  const url = joinURL(API, `/nutrition/meals/${encodeURIComponent(id)}`);
   return http<MealEntry>(url, {
     method: 'PATCH',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -149,9 +149,9 @@ export async function updateMeal(
   });
 }
 
-/** DELETE /api/nutrition/meals/:id */
+/** DELETE /nutrition/meals/:id */
 export async function deleteMeal(id: string) {
-  const url = joinURL(API, `/api/nutrition/meals/${encodeURIComponent(id)}`);
+  const url = joinURL(API, `/nutrition/meals/${encodeURIComponent(id)}`);
   return http<{ ok: true }>(url, {
     method: 'DELETE',
     headers: withAuth(),
@@ -163,17 +163,17 @@ export async function deleteMeal(id: string) {
 // ===============================
 
 /**
- * GET /api/nutrition/meals/summary/daily?day=YYYY-MM-DD
+ * GET /nutrition/meals/summary/daily?day=YYYY-MM-DD
  * (en tu backend, los summaries viven bajo /meals/summary/*)
  */
 export async function getDailySummary(day?: string): Promise<DailyNutrition> {
-  const url = joinURL(API, '/api/nutrition/meals/summary/daily') + qs({ day });
+  const url = joinURL(API, '/nutrition/meals/summary/daily') + qs({ day });
   return http<DailyNutrition>(url, { headers: withAuth() });
 }
 
-/** GET /api/nutrition/meals/summary/week?end=YYYY-MM-DD */
+/** GET /nutrition/meals/summary/week?end=YYYY-MM-DD */
 export async function getWeekSummary(end?: string): Promise<WeeklyNutritionSummary> {
-  const url = joinURL(API, '/api/nutrition/meals/summary/week') + qs({ end });
+  const url = joinURL(API, '/nutrition/meals/summary/week') + qs({ end });
   return http<WeeklyNutritionSummary>(url, { headers: withAuth() });
 }
 
@@ -182,19 +182,19 @@ export async function getWeekSummary(end?: string): Promise<WeeklyNutritionSumma
 // ===============================
 
 /**
- * GET /api/nutrition/targets/me
+ * GET /nutrition/targets/me
  * (tu router define /me, no la raíz)
  */
 export async function getMyTargets(): Promise<NutritionTargets> {
-  const url = joinURL(API, '/api/nutrition/targets/me');
+  const url = joinURL(API, '/nutrition/targets/me');
   return http<NutritionTargets>(url, { headers: withAuth() });
 }
 
-/** PUT /api/nutrition/targets/me (upsert) */
+/** PUT /nutrition/targets/me (upsert) */
 export async function upsertMyTargets(
   patch: Partial<NutritionTargets>
 ): Promise<NutritionTargets> {
-  const url = joinURL(API, '/api/nutrition/targets/me');
+  const url = joinURL(API, '/nutrition/targets/me');
   return http<NutritionTargets>(url, {
     method: 'PUT',
     headers: withAuth({ 'Content-Type': 'application/json' }),

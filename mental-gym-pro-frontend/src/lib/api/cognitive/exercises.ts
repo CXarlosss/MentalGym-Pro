@@ -1,4 +1,4 @@
-// src/lib/api/exercises.ts
+// src/lib/exercises.ts
 import type { Exercise, ExerciseResult, ExerciseSession } from '@/types';
 import { USE_MOCK, getJSON, postJSON, get } from '../config';
 
@@ -124,10 +124,10 @@ function normalizeExercise(e: Exercise): Exercise {
 // ===============================
 //  RUTAS (prioriza /cognitive/*)
 // ===============================
-const EX_LIST_PATHS = ['/api/cognitive/exercises', '/api/exercises'];
+const EX_LIST_PATHS = ['/cognitive/exercises', '/exercises'];
 const EX_ITEM_PATHS = (idOrSlug: string) => [
-  `/api/cognitive/exercises/${idOrSlug}`,
-  `/api/exercises/${idOrSlug}`,
+  `/cognitive/exercises/${idOrSlug}`,
+  `/exercises/${idOrSlug}`,
 ];
 
 // ===============================
@@ -332,8 +332,8 @@ export async function startExerciseSession(exerciseId: string): Promise<{ _id: s
   }
 
   const candidates = [
-    { path: '/api/cognitive/sessions', body: { exerciseId } },
-    { path: '/api/sessions', body: { exerciseId } },
+    { path: '/cognitive/sessions', body: { exerciseId } },
+    { path: '/sessions', body: { exerciseId } },
   ] as const;
 
   let lastErr: unknown;
@@ -371,8 +371,8 @@ export async function completeExercise(
   }
 
   const candidates = [
-    `/api/cognitive/sessions/${sessionId}/complete`,
-    `/api/sessions/${sessionId}/complete`,
+    `/cognitive/sessions/${sessionId}/complete`,
+    `/sessions/${sessionId}/complete`,
   ];
 
   for (const p of candidates) {
@@ -397,5 +397,5 @@ export async function completeExercise(
 }
 
 export async function fetchMySessions(): Promise<ExerciseSession[]> {
-  return tryGet<ExerciseSession[]>(['/api/cognitive/sessions', '/api/sessions']);
+  return tryGet<ExerciseSession[]>(['/cognitive/sessions', '/sessions']);
 }

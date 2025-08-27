@@ -1,4 +1,4 @@
-// src/lib/api/fitness.api.ts
+// src/lib/fitness.api.ts
 import type {
   ActivityEntry,
   WeeklyActivitySummary,
@@ -24,7 +24,7 @@ function withAuth(headers?: HeadersInit): HeadersInit {
 export async function addGymSetToday(
   set: Omit<LiftSet, '_id' | 'createdAt'>
 ): Promise<WorkoutEntry> {
-  const res = await fetch(`${API}/api/fitness/gym/sets`, {
+  const res = await fetch(`${API}/fitness/gym/sets`, {
     method: 'POST',
     credentials: 'include',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -35,7 +35,7 @@ export async function addGymSetToday(
 }
 
 export async function getGymWorkouts(): Promise<WorkoutEntry[]> {
-  const res = await fetch(`${API}/api/fitness/gym/workouts`, {
+  const res = await fetch(`${API}/fitness/gym/workouts`, {
     credentials: 'include',
     headers: withAuth(),
   });
@@ -44,7 +44,7 @@ export async function getGymWorkouts(): Promise<WorkoutEntry[]> {
 }
 
 export async function getGymWeeklySummary(): Promise<WorkoutWeeklySummary> {
-  const res = await fetch(`${API}/api/fitness/gym/weekly-summary`, {
+  const res = await fetch(`${API}/fitness/gym/weekly-summary`, {
     credentials: 'include',
     headers: withAuth(),
   });
@@ -53,7 +53,7 @@ export async function getGymWeeklySummary(): Promise<WorkoutWeeklySummary> {
 }
 
 export async function getGroupVolumeThisWeek(): Promise<GroupVolume[]> {
-  const res = await fetch(`${API}/api/fitness/gym/group-volume-week`, {
+  const res = await fetch(`${API}/fitness/gym/group-volume-week`, {
     credentials: 'include',
     headers: withAuth(),
   });
@@ -63,7 +63,7 @@ export async function getGroupVolumeThisWeek(): Promise<GroupVolume[]> {
 
 // ---------- ACTIVITY (pasos) ----------
 export async function getActivities(): Promise<ActivityEntry[]> {
-  const res = await fetch(`${API}/api/fitness/activity`, {
+  const res = await fetch(`${API}/fitness/activity`, {
     credentials: 'include',
     headers: withAuth(),
   });
@@ -77,7 +77,7 @@ export async function upsertTodayActivity(input: {
   calories?: number;
   note?: string;
 }): Promise<ActivityEntry> {
-  const res = await fetch(`${API}/api/fitness/activity/today`, {
+  const res = await fetch(`${API}/fitness/activity/today`, {
     method: 'PUT',
     credentials: 'include',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -88,7 +88,7 @@ export async function upsertTodayActivity(input: {
 }
 
 export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
-  const res = await fetch(`${API}/api/fitness/activity/weekly`, { // <- antes: /weekly-summary
+  const res = await fetch(`${API}/fitness/activity/weekly`, { // <- antes: /weekly-summary
     credentials: 'include',
     headers: withAuth(),
   });
@@ -100,7 +100,7 @@ export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
 export async function addCardioToday(
   input: Omit<CardioEntry, '_id' | 'date' | 'createdAt' | 'updatedAt'>
 ): Promise<CardioEntry> {
-  const res = await fetch(`${API}/api/fitness/cardio`, {
+  const res = await fetch(`${API}/fitness/cardio`, {
     method: 'POST',
     credentials: 'include',
     headers: withAuth({ 'Content-Type': 'application/json' }),
@@ -111,7 +111,7 @@ export async function addCardioToday(
 }
 
 export async function getCardioWeek() {
-  const res = await fetch(`${API}/api/fitness/cardio/week`, {
+  const res = await fetch(`${API}/fitness/cardio/week`, {
     credentials: 'include',
     headers: withAuth(),
   });
