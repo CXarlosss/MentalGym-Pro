@@ -7,14 +7,20 @@ import Exercise from '../models/cognitive/Exercise.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-// Cargar .env desde la raíz del backend
-dotenv.config({ path: path.resolve(__dirname, '../../.env') })
+import "dotenv/config";
 
-const uri = process.env.MONGO_URI
-if (!uri) {
-  throw new Error('❌ Falta la variable MONGO_URI en .env')
-}
+
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.DB_NAME || "mental-gym-pro";
+if (!uri) throw new Error("❌ Falta MONGODB_URI en .env");
+
+await mongoose.connect(uri, { dbName });
+console.log(`✅ Conectado a MongoDB (DB: ${dbName})`);
+
+// ... (tu mismo código de seed)
+
 
 await mongoose.connect(uri)
 

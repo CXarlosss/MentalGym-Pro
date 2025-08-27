@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed:exercises": "node src/scripts/seed-exercises.cjs"
+    "seed": "node src/scripts/seed-exercises.mjs",
+    "seed:wipe": "cross-env SEED_WIPE=1 node src/scripts/seed-exercises.mjs"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

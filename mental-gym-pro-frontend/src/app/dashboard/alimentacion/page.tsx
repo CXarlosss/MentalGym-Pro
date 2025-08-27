@@ -29,7 +29,7 @@ import type {
 
 type SectionId = 'resumen' | 'agua' | 'diario' | 'objetivos' | 'db' | 'custom' | 'insights'
 
-/* ========== Accordion controlado (abre/cierra desde fuera) ========== */
+/* ========== Accordion controlado (multi-open) ========== */
 function AccordionSection({
   id,
   title,
@@ -133,20 +133,23 @@ export default function HabitosSaludablesPage() {
     tags: [],
   })
 
-  // ---- NAV/Accordion: todo cerrado por defecto ----
-  const [openSec, setOpenSec] = useState<SectionId | null>(null)
-  const [activeSec, setActiveSec] = useState<SectionId | null>(null)
+  // ---- NAV/Accordion: multi-open (todo cerrado por defecto) ----
+  const [openSet, setOpenSet] = useState<Set<SectionId>>(new Set())
 
   const scrollToId = useCallback((id: SectionId) => {
     const el = document.getElementById(id)
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
-  const toggleSection = (id: SectionId) => {
-    setOpenSec(prev => (prev === id ? null : id))
-    setActiveSec(id)
+  const toggleSection = useCallback((id: SectionId) => {
+    setOpenSet(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
     setTimeout(() => scrollToId(id), 60)
-  }
+  }, [scrollToId])
 
   // Secciones visibles (oculta Objetivos si no hay targets; Insights si no hay week)
   const sections = useMemo(
@@ -292,24 +295,27 @@ export default function HabitosSaludablesPage() {
         </motion.div>
       </motion.div>
 
-      {/* NAVBAR STICKY con todos los apartados (todo cerrado al inicio) */}
+      {/* NAVBAR STICKY con todos los apartados */}
       <div className="sticky top-0 z-20 -mx-4 px-4 py-2 backdrop-blur bg-white/60 border-b">
         <div className="flex items-center gap-2 overflow-auto no-scrollbar">
-          {sections.map(s => (
-            <button
-              key={s.id}
-              onClick={() => toggleSection(s.id)}
-              className={[
-                'px-3 py-1.5 rounded-full text-sm border transition',
-                activeSec === s.id
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300',
-              ].join(' ')}
-            >
-              <span className="mr-1">{s.emoji}</span>
-              {s.label}
-            </button>
-          ))}
+          {sections.map(s => {
+            const isOpen = openSet.has(s.id)
+            return (
+              <button
+                key={s.id}
+                onClick={() => toggleSection(s.id)}
+                className={[
+                  'px-3 py-1.5 rounded-full text-sm border transition',
+                  isOpen
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300',
+                ].join(' ')}
+              >
+                <span className="mr-1">{s.emoji}</span>
+                {s.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -318,7 +324,7 @@ export default function HabitosSaludablesPage() {
         id="resumen"
         title="Resumen de hoy"
         subtitle="Calorías, macros y agua de la jornada"
-        open={openSec === 'resumen'}
+        open={openSet.has('resumen')}
         onToggle={toggleSection}
       >
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -346,22 +352,59 @@ export default function HabitosSaludablesPage() {
         id="agua"
         title="Agua"
         subtitle="Registra tu ingesta de agua"
-        open={openSec === 'agua'}
+        open={openSet.has('agua')}
         onToggle={toggleSection}
       >
-        <div className="flex flex-wrap gap-2 items-center">
-          {[250, 500, 750, 1000].map(ml => (
-            <motion.div key={ml} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                onClick={() => handleAddWater(ml)}
-                className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
-              >
-                +{ml} ml
-              </Button>
-            </motion.div>
-          ))}
-          <div className="text-sm text-gray-500 ml-auto">Objetivo: {targets?.waterMl ?? 0} ml</div>
-        </div>
+        {(() => {
+          const waterToday = today?.waterMl ?? 0
+          const goalDisplay = (targets?.waterMl && targets.waterMl > 0) ? targets.waterMl : 2000
+          const pct = Math.min(100, Math.round((waterToday / Math.max(goalDisplay, 1)) * 100))
+          const remaining = Math.max(goalDisplay - waterToday, 0)
+
+          return (
+            <div className="space-y-3">
+              {/* Resumen actual */}
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <div className="text-xs text-gray-500">Llevas hoy</div>
+                  <div className="text-2xl font-semibold">{waterToday} ml</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Objetivo</div>
+                  <div className="text-lg font-medium">{goalDisplay} ml</div>
+                </div>
+                <div className="ml-auto text-sm text-gray-600">
+                  {pct}% del objetivo • Te faltan <b>{remaining} ml</b>
+                </div>
+              </div>
+
+              {/* Barra de progreso */}
+              <div className="w-full bg-blue-100 rounded-full h-2.5" aria-label="Progreso de agua">
+                <div
+                  className="h-2.5 rounded-full bg-blue-500 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+
+              {/* Botones rápidos */}
+              <div className="flex flex-wrap gap-2 items-center">
+                {[250, 500, 750, 1000].map(ml => (
+                  <motion.div key={ml} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      onClick={() => handleAddWater(ml)}
+                      className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                    >
+                      +{ml} ml
+                    </Button>
+                  </motion.div>
+                ))}
+                <div className="text-sm text-gray-500 ml-auto">
+                  Objetivo configurado: {targets?.waterMl ?? 2000} ml
+                </div>
+              </div>
+            </div>
+          )
+        })()}
       </AccordionSection>
 
       {/* Alimentación del día */}
@@ -369,7 +412,7 @@ export default function HabitosSaludablesPage() {
         id="diario"
         title="Alimentación del día"
         subtitle="Registra alimentos y revisa tu diario"
-        open={openSec === 'diario'}
+        open={openSet.has('diario')}
         onToggle={toggleSection}
       >
         <div className="space-y-4">
@@ -541,7 +584,7 @@ export default function HabitosSaludablesPage() {
           id="objetivos"
           title="Objetivos diarios"
           subtitle="Personaliza tus metas"
-          open={openSec === 'objetivos'}
+          open={openSet.has('objetivos')}
           onToggle={toggleSection}
         >
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -588,7 +631,7 @@ export default function HabitosSaludablesPage() {
         id="db"
         title="Base de datos de alimentos"
         subtitle="Busca y marca favoritos"
-        open={openSec === 'db'}
+        open={openSet.has('db')}
         onToggle={toggleSection}
       >
         <div className="space-y-4">
@@ -656,7 +699,7 @@ export default function HabitosSaludablesPage() {
         id="custom"
         title="Agregar alimento personalizado"
         subtitle="Define valores por 100g o por unidad"
-        open={openSec === 'custom'}
+        open={openSet.has('custom')}
         onToggle={toggleSection}
       >
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
@@ -734,7 +777,7 @@ export default function HabitosSaludablesPage() {
           id="insights"
           title="Insights"
           subtitle="Resumen de los últimos 7 días"
-          open={openSec === 'insights'}
+          open={openSet.has('insights')}
           onToggle={toggleSection}
         >
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
