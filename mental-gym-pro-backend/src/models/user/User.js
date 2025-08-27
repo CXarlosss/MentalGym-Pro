@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
-  {
+  {  name: { type: String, required: [true, 'El nombre es obligatorio'] }, // 👈 nuevo
+
     username: {
       type: String,
       required: [true, "El nombre de usuario es obligatorio"],
