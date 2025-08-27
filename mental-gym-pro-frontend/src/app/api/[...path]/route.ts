@@ -1,16 +1,19 @@
 // src/app/api/[...path]/route.ts
 import type { NextRequest } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5000';
+export const dynamic = 'force-dynamic';
 
-function buildTarget(segments: string[], search: string) {
-  const joined = segments.join('/');
+const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '');
+
+function buildTarget(segments: unknown, search: string) {
+  const parts = Array.isArray(segments) ? segments : segments ? [String(segments)] : [];
+  const joined = parts.join('/');
   return `${BACKEND_URL}/api/${joined}${search || ''}`;
 }
 
-// ⚠️ Usa `any` para evitar el error de tipos
-async function handler(req: NextRequest, { params }: { params: { path: string[] } }) {
-  const target = buildTarget(params.path, req.nextUrl.search);
+// 👇 aquí tipamos ctx como Record<string, unknown> para evitar `any`
+async function proxy(req: NextRequest, ctx: Record<string, unknown>) {
+  const target = buildTarget((ctx as { params?: { path?: string[] } })?.params?.path, req.nextUrl.search);
 
   const headers = new Headers(req.headers);
   headers.delete('host');
@@ -25,16 +28,23 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
 
   const upstream = await fetch(target, init);
 
-  const outHeaders = new Headers(upstream.headers);
-  outHeaders.delete('access-control-allow-origin');
-  outHeaders.delete('access-control-allow-credentials');
-  outHeaders.delete('content-length');
+  const out = new Headers(upstream.headers);
+  out.delete('access-control-allow-origin');
+  out.delete('access-control-allow-credentials');
+  out.delete('content-length');
 
   return new Response(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
-    headers: outHeaders,
+    headers: out,
   });
 }
 
-export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE, handler as OPTIONS };
+export {
+  proxy as GET,
+  proxy as POST,
+  proxy as PUT,
+  proxy as PATCH,
+  proxy as DELETE,
+  proxy as OPTIONS,
+};
