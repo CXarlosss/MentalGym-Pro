@@ -11,9 +11,11 @@ export interface BaseEntity {
 export interface User extends BaseEntity {
   name: string;
   email: string;
+  username?: string; 
   password?: string;
   avatar?: string;
 }
+
 
 // --- Sesiones de Ejercicio ---
 export interface ExerciseSession {

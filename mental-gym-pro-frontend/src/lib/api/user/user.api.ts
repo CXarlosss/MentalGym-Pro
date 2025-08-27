@@ -1,20 +1,38 @@
 // src/lib/api/user.api.ts
 import type { User } from '@/types';
-import { patchJSON, get, postJSON } from '../config';
+import { patchJSON, get, postJSON } from '../config'; // <- aquí
 
-// Lee perfil actual
+// Perfil actual
 export const getMe = () => get<User>('/api/users/me');
 
-// Actualiza username/email/avatar (tu controller acepta username, email, avatar)
-export const updateUserProfile = (input: Partial<Pick<User, 'username' | 'email' | 'avatar'>>) =>
+// Lo que tu backend acepta actualizar (sé flexible con name/username)
+type ProfileUpdateInput = Partial<{
+  username: string;
+  name: string;
+  email: string;
+  avatar: string;
+}>;
+
+export const updateUserProfile = (input: ProfileUpdateInput) =>
   patchJSON<User>('/api/users/me', input);
 
 // Cambiar contraseña
 export const changePassword = (input: { currentPassword: string; newPassword: string }) =>
   postJSON<{ success: boolean }>('/api/users/me/password', input);
 
-// (Opcional) follow/unfollow y listas, por si los usas desde el front:
-export const followUser = (id: string) => postJSON<{ success: boolean }>(`/api/users/${id}/follow`, {});
-export const unfollowUser = (id: string) => fetch(`/api/users/${id}/follow`, { method: 'DELETE', credentials: 'include' }).then(r => r.json());
-export const myFollowers = () => get<Array<Pick<User,'_id'|'username'|'avatar'>>>('/api/users/me/followers');
-export const myFollowing = () => get<Array<Pick<User,'_id'|'username'|'avatar'>>>('/api/users/me/following');
+// Tipado público mínimo para listas de seguidores
+type PublicUser = {
+  _id: string;
+  avatar?: string;
+  username?: string;
+  name?: string;
+};
+
+export const followUser = (id: string) =>
+  postJSON<{ success: boolean }>(`/api/users/${id}/follow`, {});
+
+export const unfollowUser = (id: string) =>
+  fetch(`/api/users/${id}/follow`, { method: 'DELETE', credentials: 'include' }).then((r) => r.json());
+
+export const myFollowers = () => get<PublicUser[]>('/api/users/me/followers');
+export const myFollowing = () => get<PublicUser[]>('/api/users/me/following');
