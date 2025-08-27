@@ -3,12 +3,12 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 
-// Middlewares propios
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
-// ===== Rutas =====
+// Rutas...
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user/user.routes.js';
 import cognitiveExerciseRoutes from './routes/cognitive/exercise.routes.js';
@@ -28,17 +28,35 @@ await connectDB();
 
 const app = express();
 
-// ===== Middlewares base =====
+// ===== CORS =====
 const allowed = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.CLIENT_ORIGIN, // p.ej. https://tu-sitio.netlify.app en prod
+  process.env.CLIENT_ORIGIN, // p.ej. https://magenta-alpaca-2866e7.netlify.app
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, cb) => (!origin || allowed.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'))),
+// ayuda a caches/CDN a diferenciar por Origin
+app.use((req, res, next) => {
+  res.header('Vary', 'Origin');
+  next();
+});
+
+// maneja preflight + CORS con credenciales
+const corsOptions = {
+  origin(origin, cb) {
+    if (!origin || allowed.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS blocked'));
+  },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));   // ✅ Express 5 OK
+
+
+// ===== Middlewares base =====
+app.use(cookieParser()); // si usas cookies JWT
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -46,34 +64,29 @@ app.use(morgan('dev'));
 app.get('/', (_req, res) => res.send('🔥 MentalGym Pro Backend en marcha'));
 app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
 
-// ===== Montaje de rutas API =====
+// ===== API =====
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-
 app.use('/api/cognitive/exercises', cognitiveExerciseRoutes);
 app.use('/api/cognitive/sessions', cognitiveSessionRoutes);
-
 app.use('/api/mental', mentalRoutes);
-
 app.use('/api/gamification/challenges', challengeRoutes);
 app.use('/api/gamification/badges', badgeRoutes);
-app.use('/api/challenges', challengeRoutes); // alias compatibilidad
-
+app.use('/api/challenges', challengeRoutes);
 app.use('/api/nutrition/foods', foodRoutes);
 app.use('/api/nutrition/meals', mealRoutes);
 app.use('/api/nutrition/targets', targetRoutes);
-
 app.use('/api/gym/exercises', gymExerciseRoutes);
 app.use('/api/gym/workouts', gymWorkoutRoutes);
-
-app.use('/api/stats', statsRoutes); // <- ahora SÍ montado antes del 404
+app.use('/api/stats', statsRoutes);
 
 // ===== 404 & errores =====
 app.use(notFound);
 app.use(errorHandler);
 
-// ===== Arrancar servidor =====
+// ===== Arrancar =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log('CORS allowed:', allowed);
 });
