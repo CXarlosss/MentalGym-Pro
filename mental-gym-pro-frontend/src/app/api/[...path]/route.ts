@@ -8,8 +8,9 @@ function buildTarget(segments: string[], search: string) {
   return `${BACKEND_URL}/api/${joined}${search || ''}`;
 }
 
-async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
-  const target = buildTarget(ctx.params.path, req.nextUrl.search);
+// ⚠️ Usa `any` para evitar el error de tipos
+async function handler(req: NextRequest, { params }: { params: { path: string[] } }) {
+  const target = buildTarget(params.path, req.nextUrl.search);
 
   const headers = new Headers(req.headers);
   headers.delete('host');
