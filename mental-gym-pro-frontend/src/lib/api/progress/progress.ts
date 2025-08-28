@@ -1,6 +1,6 @@
 import type { UserProgress, Challenge, DashboardStats, UserChallenge } from '@/types';
-import { USE_MOCK, getJSON, get } from '../config';
-
+import { USE_MOCK } from '../config'; // Si existe
+import { getJSON, get } from '../config'; // Mueve estas funciones
 // ===============================
 //       FUNCIONES DE SOPORTE
 // ===============================
@@ -179,20 +179,30 @@ export async function fetchUserProgress(): Promise<DashboardStats> {
 }
 
 export async function fetchActiveChallenges(): Promise<Challenge[]> {
-  if (USE_MOCK) return MOCK_CHALLENGES;
+  console.log('🔍 fetchActiveChallenges called - function exists:', typeof fetchActiveChallenges === 'function');
+  console.log('🔍 USE_MOCK value:', USE_MOCK);
+  
+  if (USE_MOCK) {
+    console.log('🔍 Using MOCK_CHALLENGES');
+    return MOCK_CHALLENGES;
+  }
+  
   try {
+    console.log('🔍 Trying to fetch from backend...');
     const paths = [
       '/gamification/challenges/active',
       '/challenges/active',
       '/challenges/active',
     ];
-    return await getJSON<Challenge[]>(paths, { headers: authHeader() });
+    const result = await getJSON<Challenge[]>(paths, { headers: authHeader() });
+    console.log('🔍 Backend response:', result);
+    return result;
   } catch (e) {
     console.warn('[fetchActiveChallenges] backend falló, usando mock:', e);
+    console.log('🔍 Falling back to MOCK_CHALLENGES');
     return MOCK_CHALLENGES;
   }
 }
-
 export async function fetchMyChallenges(): Promise<UserChallenge[]> {
   if (USE_MOCK) {
     return MOCK_MY_CHALLENGES;

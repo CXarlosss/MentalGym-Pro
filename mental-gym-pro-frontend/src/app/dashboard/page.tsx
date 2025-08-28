@@ -10,16 +10,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchUserProgress } from "@/lib/api/progress/progress";
 
 // Keep the rest of your imports as they were, but separated
-import {
-  fetchActiveChallenges,
-  fetchMyChallenges,
-  fetchRecentExercises,
-  fetchExercises,
-  fetchExerciseCategories,
-  getWeeklyActivity,
-} from "@/lib/api/";
-// Or import them directly as well if they're also in separate files
+import { fetchActiveChallenges, fetchMyChallenges } from "@/lib/api/progress/progress";
+import { fetchRecentExercises, fetchExercises, fetchExerciseCategories } from "@/lib/api/cognitive/exercises";
+import { getWeeklyActivity } from "@/lib/api/fitness/fitness";
 import { getTodayNutrition, getNutritionTargets } from "@/lib/api/nutrition/nutrition";
+// Or import them directly as well if they're also in separate files
+// En tu dashboard page.tsx, antes del useEffect
+console.log('🔄 Import check - fetchActiveChallenges:', typeof fetchActiveChallenges);
+console.log('🔄 Import check - fetchUserProgress:', typeof fetchUserProgress);
+console.log('🔄 Import check - fetchMyChallenges:', typeof fetchMyChallenges);
+
+// Agrega esto también en el useEffect antes de llamar a las funciones
+console.log('📞 Pre-call check - fetchActiveChallenges:', typeof fetchActiveChallenges);
+if (typeof fetchActiveChallenges !== 'function') {
+  console.error('❌ fetchActiveChallenges is not a function! Value:', fetchActiveChallenges);
+  throw new Error('fetchActiveChallenges is not a function');
+}
 
 import ProgressChart from "@/components/dashboard/ProgressChart";
 import ExerciseCard from "@/components/cards/ExerciseCard";
