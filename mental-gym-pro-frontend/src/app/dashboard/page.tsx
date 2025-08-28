@@ -6,15 +6,19 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Corrected import
+import { fetchUserProgress } from "@/lib/api/progress/progress";
+
+// Keep the rest of your imports as they were, but separated
 import {
-  fetchUserProgress,
-  fetchActiveChallenges,
-  fetchMyChallenges,
-  fetchRecentExercises,
-  fetchExercises,
-  fetchExerciseCategories,
-  getWeeklyActivity,
+  fetchActiveChallenges,
+  fetchMyChallenges,
+  fetchRecentExercises,
+  fetchExercises,
+  fetchExerciseCategories,
+  getWeeklyActivity,
 } from "@/lib/api/";
+// Or import them directly as well if they're also in separate files
 import { getTodayNutrition, getNutritionTargets } from "@/lib/api/nutrition/nutrition";
 
 import ProgressChart from "@/components/dashboard/ProgressChart";
@@ -178,58 +182,71 @@ export default function DashboardPage() {
 
   // ---------- Carga inicial ----------
   useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        setLoading(true);
+  async function loadDashboardData() {
+    try {
+      setLoading(true);
+      console.log('Iniciando carga de datos del dashboard...');
 
-        const [
-          progress,
-          challenges,
-          recent,
-          allExercises,
-          cats,
-          wAct,
-          todayData,
-          targetsData,
-          mine,
-        ] = await Promise.all([
-          fetchUserProgress(),
-          fetchActiveChallenges(),
-          fetchRecentExercises(3),
-          fetchExercises(),
-          fetchExerciseCategories(),
-          getWeeklyActivity(),
-          getTodayNutrition(),
-          getNutritionTargets(),
-          fetchMyChallenges(),
-        ]);
+      const [
+        progress,
+        challenges,
+        recent,
+        allExercises,
+        cats,
+        wAct,
+        todayData,
+        targetsData,
+        mine,
+      ] = await Promise.all([
+        fetchUserProgress(),
+        fetchActiveChallenges(),
+        fetchRecentExercises(3),
+        fetchExercises(),
+        fetchExerciseCategories(),
+        getWeeklyActivity(),
+        getTodayNutrition(),
+        getNutritionTargets(),
+        fetchMyChallenges(),
+      ]);
 
-        setData({
-          weeklyData: progress.weeklyData,
-          streak: progress.streak,
-          totalExercises: progress.totalExercises,
-          averageScore: progress.averageScore,
-          recentExercises: recent,
-          activeChallenges: challenges,
-        });
+      setData({
+        weeklyData: progress.weeklyData,
+        streak: progress.streak,
+        totalExercises: progress.totalExercises,
+        averageScore: progress.averageScore,
+        recentExercises: recent,
+        activeChallenges: challenges,
+      });
 
-        const list = Array.isArray(allExercises) ? allExercises : allExercises.items;
-        setExercises(list);
-        setCategories(cats);
-        setWeekAct(wAct);
+      const list = Array.isArray(allExercises) ? allExercises : allExercises.items;
+      setExercises(list);
+      setCategories(cats);
+      setWeekAct(wAct);
 
-        setToday(todayData);
-        setTargets(targetsData);
-        setMyChallenges(mine);
-      } catch (err) {
-        console.error(err);
+      setToday(todayData);
+      setTargets(targetsData);
+      setMyChallenges(mine);
+      
+    } catch (err) {
+      console.error('Error en loadDashboardData:', err);
+      
+      // Verificación de tipo para TypeScript
+      if (err instanceof Error) {
+        console.error('Error stack:', err.stack);
+        console.error('Error message:', err.message);
+        setError("Error al cargar los datos del dashboard: " + err.message);
+      } else {
+        console.error('Error desconocido:', err);
         setError("Error al cargar los datos del dashboard");
-      } finally {
-        setLoading(false);
       }
+      
+    } finally {
+      setLoading(false);
     }
-    if (user) loadDashboardData();
-  }, [user]);
+  }
+  
+  if (user) loadDashboardData();
+}, [user]);
 
   // Refrescar desafíos cuando cambie el estado local (join/complete)
   const refreshChallenges = useCallback(async () => {
