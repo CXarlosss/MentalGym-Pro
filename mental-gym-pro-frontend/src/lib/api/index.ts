@@ -20,7 +20,7 @@ export {
 export { clearLegacyLocalData, clearUserScopedData } from './localData';
 
 // ✅ Progreso — apunta al índice NUEVO del folder
-export { fetchUserProgress } from './progress/index';
+export { fetchUserProgress } from './progress/progress';
 
 // Gamificación
 export * from './gamification/gamification';
