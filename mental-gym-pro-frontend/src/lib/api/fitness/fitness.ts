@@ -22,3 +22,13 @@ export const getGroupVolumeThisWeek = ACTUAL_USE_MOCK ? Local.getGroupVolumeThis
 // ---------- CARDIO ----------
 export const addCardioToday = ACTUAL_USE_MOCK ? Local.addCardioToday : Api.addCardioToday;
 export const getCardioWeek = ACTUAL_USE_MOCK ? Local.getCardioWeek : Api.getCardioWeek;
+// ---------- ROUTINES ----------
+export const seedDefaultRoutinesOnce = Local.seedDefaultRoutinesOnce
+export const getRoutines = Local.getRoutines
+export const duplicateRoutine = Local.duplicateRoutine
+export const getFavoriteExercises = Local.getFavoriteExercises
+
+// ---------- UTILIDADES 1RM ----------
+export const epley1RM = Local.epley1RM // normalmente son cálculos locales
+export const brzycki1RM = Local.brzycki1RM
+export const targetFromPercent1RM = Local.targetFromPercent1RM
