@@ -2,21 +2,20 @@ import bcrypt from "bcrypt";
 import User from "../models/user/User.js";
 import generateToken from "../utils/genterateToken.js";
 
-// ---- helpers ----
+// helpers…
 function slugifyName(name) {
   return String(name).trim().toLowerCase()
-    .replace(/\s+/g, '')       // quita espacios
-    .replace(/[^a-z0-9_]/g, ''); // solo a-z0-9_
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9_]/g, '');
 }
 
 async function generateUniqueUsername(base) {
   let candidate = base || 'user';
   let i = 0;
-  // intenta base, base1, base2...
   // eslint-disable-next-line no-await-in-loop
   while (await User.findOne({ username: candidate })) {
     i += 1;
-    candidate = `${base}${i}`;
+    candidate = `${base || 'user'}${i}`;   // robusto si base=''
   }
   return candidate;
 }
@@ -37,14 +36,14 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
-    // username único basado en name
-    const base = slugifyName(name) || emailNorm.split('@')[0];
+    const cleanName = String(name).trim();
+    const base = slugifyName(cleanName) || emailNorm.split('@')[0];
     const username = await generateUniqueUsername(base);
 
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({
-      // si tu esquema no tiene "name", no pasa nada; guardamos el visible en "username"
-      username,
+      name: cleanName,       // 👈 NECESARIO por tu schema
+      username,              // 👈 visible/único
       email: emailNorm,
       password: hash,
     });
@@ -53,8 +52,7 @@ export const register = async (req, res) => {
       token: generateToken(user._id),
       user: {
         _id: user._id,
-        // para el frontend exponemos "name" (lees el username)
-        name: user.username,
+        name: user.name,               // 👈 ahora devuelves el name real
         email: user.email,
         avatar: user.avatar ?? '',
         createdAt: user.createdAt,
@@ -63,7 +61,6 @@ export const register = async (req, res) => {
     });
   } catch (err) {
     if (err && err.code === 11000) {
-      // por si aún chocamos con otra unique (email/username)
       const field = Object.keys(err.keyPattern || {})[0] || 'campo';
       return res.status(409).json({ message: `El ${field} ya está en uso` });
     }
@@ -90,7 +87,7 @@ export const login = async (req, res) => {
       token: generateToken(user._id),
       user: {
         _id: user._id,
-        name: user.username, // usamos username como nombre visible
+        name: user.name,               // 👈 usa name
         email: user.email,
         avatar: user.avatar ?? '',
         createdAt: user.createdAt,
@@ -103,7 +100,7 @@ export const login = async (req, res) => {
   }
 };
 
-// GET /api/auth/me  (usa tu middleware protect que pone req.user)
+// GET /api/auth/me
 export const me = async (req, res) => {
   try {
     const user = await User.findById(req.user?._id);
@@ -111,7 +108,7 @@ export const me = async (req, res) => {
 
     return res.json({
       _id: user._id,
-      name: user.username,
+      name: user.name,                // 👈 usa name
       email: user.email,
       avatar: user.avatar ?? '',
       createdAt: user.createdAt,
@@ -123,21 +120,24 @@ export const me = async (req, res) => {
   }
 };
 
-// PATCH /api/auth/profile  (name, avatar) -> mapea name a username
+// PATCH /api/auth/profile (name, avatar)
 export const updateProfile = async (req, res) => {
   try {
     const { name, avatar } = req.body ?? {};
     const user = await User.findById(req.user?._id);
     if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
 
-    if (typeof name === 'string' && name.trim()) user.username = name.trim();
+    if (typeof name === 'string' && name.trim()) {
+      user.name = name.trim();        // 👈 actualiza name (requerido por schema)
+      user.username = name.trim();    // opcional: mantenlos en sync
+    }
     if (typeof avatar === 'string') user.avatar = avatar;
 
     await user.save();
 
     return res.json({
       _id: user._id,
-      name: user.username,
+      name: user.name,                // 👈 usa name
       email: user.email,
       avatar: user.avatar ?? '',
       createdAt: user.createdAt,
@@ -152,6 +152,9 @@ export const updateProfile = async (req, res) => {
     return res.status(500).json({ message: 'No se pudo actualizar el perfil' });
   }
 };
+
+// PATCH /api/auth/profile  (name, avatar) -> mapea name a username
+
 
 // PATCH /api/auth/password  (currentPassword, newPassword)
 export const changePassword = async (req, res) => {
