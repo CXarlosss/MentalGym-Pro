@@ -141,10 +141,10 @@ export function qs(params: QueryParams): string {
 // ===============================
 //        Helpers de auth/HTTP
 // ===============================
-function authHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
+export function authHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  if (typeof window === 'undefined') return extraHeaders;
   const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return token ? { Authorization: `Bearer ${token}`, ...extraHeaders } : extraHeaders;
 }
 
 async function safeJSON(res: Response): Promise<unknown | null> {
@@ -249,3 +249,4 @@ export const delJSON = <T>(path: string, init?: RequestInit) =>
 
 export const del = <T>(path: string, init?: RequestInit) =>
   apiFetch<T>(path, { method: 'DELETE', ...(init || {}) });
+

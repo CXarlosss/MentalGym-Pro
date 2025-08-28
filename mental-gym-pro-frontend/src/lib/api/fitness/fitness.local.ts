@@ -17,10 +17,7 @@ import type {
 import { LS_KEYS, toLocalYMD, todayKey, scopedLSKey } from '../config';
 
 // ===============================
-//      Utils LocalStorage
-// ===============================
-// ===============================
-//      Utils LocalStorage
+//       Utils LocalStorage
 // ===============================
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -122,7 +119,7 @@ export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
   return { totalSteps, avgSteps, bestDay, streak, last7Days: days };
 }
 // ===============================
-//            GYM (sets)
+//           GYM (sets)
 // ===============================
 const GYM_KEY = LS_KEYS.gym;
 
@@ -206,7 +203,7 @@ export async function getGroupVolumeThisWeek(): Promise<GroupVolume[]> {
   return Array.from(map.entries()).map(([group, sets]) => ({ group, sets }));
 }
 // ===============================
-//          RUTINAS (LS)
+//           RUTINAS (LS)
 // ===============================
 const ROUTINES_KEY = LS_KEYS.routines;
 
@@ -222,7 +219,6 @@ export function saveRoutine(rt: RoutineTemplate) {
   writeJSON(ROUTINES_KEY, list);
 }
 function shortId(prefix = ''): string {
-  // tipamos sin usar "any"
   const g = globalThis as unknown as { crypto?: { randomUUID?: () => string } };
   const uuid = g.crypto?.randomUUID?.();
   const base = uuid ?? Math.random().toString(36).slice(2, 10);
@@ -314,7 +310,7 @@ export function seedDefaultRoutinesOnce() {
   writeJSON(ROUTINES_KEY, seed);
 }
 // ===============================
-//     Favoritos de Ejercicios
+//    Favoritos de Ejercicios
 // ===============================
 const FAVORITES_KEY = LS_KEYS.favExercises;
 
@@ -379,7 +375,7 @@ export async function getCardioWeek() {
 }
 
 // ===============================
-//        Goals & Badges (LS)
+//       Goals & Badges (LS)
 // ===============================
 const GOALS_KEY = LS_KEYS.goals;
 const BADGES_KEY = LS_KEYS.badges;
@@ -390,15 +386,36 @@ export function getGoals(): CardioGoals {
 export function setGoals(g: CardioGoals) {
   writeJSON(GOALS_KEY, g);
 }
-export function getBadges(): Badge[] {
+
+// --- Corrected Badges Functions ---
+function readBadges(): Badge[] {
   return readJSON<Badge[]>(BADGES_KEY, []);
 }
-export function unlockBadge(code: string, title: string) {
-  const badges = getBadges();
-  if (badges.some((b) => b.code === code)) return badges;
-  badges.push({ code, title, unlockedAt: new Date().toISOString() });
-  writeJSON(BADGES_KEY, badges);
-  return badges;
+
+function writeBadges(list: Badge[]) {
+  writeJSON(BADGES_KEY, list);
+}
+// Mock de badges
+import { API, authHeaders } from '../config';
+
+export async function getBadges(): Promise<Badge[]> {
+  const res = await fetch(`${API}/fitness/badges`, {
+    credentials: 'include',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+export async function unlockBadge(code: string, title: string): Promise<Badge[]> {
+  const res = await fetch(`${API}/fitness/badges/unlock`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ code, title }),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
 }
 
 // ===============================
@@ -417,7 +434,6 @@ export function targetFromPercent1RM(oneRm: number, percent: number) {
 
 // ===============================
 //  Auth & Perfil (mock/local)
-//  (incluido aquí para mantener 5 archivos)
 // ===============================
 export async function login(email: string, password: string): Promise<{ token: string; user: User }> {
   const validUsers = [

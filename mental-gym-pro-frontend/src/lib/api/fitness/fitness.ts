@@ -38,5 +38,5 @@ export const getGoals = Local.getGoals
 export const setGoals = Local.setGoals
 
 // ---------- BADGES ----------
-export const getBadges = Local.getBadges
-export const unlockBadge  = Local.unlockBadge
+export const getBadges = Local.getBadges;
+export const unlockBadge = Local.unlockBadge;

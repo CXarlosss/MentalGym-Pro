@@ -2,38 +2,57 @@
 import { useEffect, useState } from 'react'
 import { getBadges, unlockBadge } from '@/lib/api/'
 import dynamic from 'next/dynamic'
+import type { Badge } from '@/types'
 
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false })
 
-// Hook personalizado para obtener las dimensiones de la ventana de forma segura
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const handleResize = () => {
-        setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-      };
-      window.addEventListener('resize', handleResize);
-      handleResize(); // Set initial size
-      return () => window.removeEventListener('resize', handleResize);
+      const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+      window.addEventListener('resize', handleResize)
+      handleResize()
+      return () => window.removeEventListener('resize', handleResize)
     }
-  }, []);
-  return windowSize;
-};
+  }, [])
+  return windowSize
+}
 
-export default function AchievementsModal({ open, onClose, autoUnlockStreak7 = false, streak = 0 }: {
-  open: boolean; onClose: () => void; autoUnlockStreak7?: boolean; streak?: number
+export default function AchievementsModal({
+  open,
+  onClose,
+  autoUnlockStreak7 = false,
+  streak = 0
+}: {
+  open: boolean
+  onClose: () => void
+  autoUnlockStreak7?: boolean
+  streak?: number
 }) {
-  const [badges, setBadges] = useState(() => getBadges())
+  const [badges, setBadges] = useState<Badge[]>([]) // ✅ inicializamos como array
   const [showConfetti, setShowConfetti] = useState(false)
   const { width, height } = useWindowSize()
 
+  // Cargar badges al abrir el modal
   useEffect(() => {
-    if (open && autoUnlockStreak7 && streak >= 7 && !badges.find(b => b.code === 'streak7')) {
-      const updated = unlockBadge('streak7', '🔥 Racha 7 días')
-      setBadges(updated)
-      setShowConfetti(true)
-      setTimeout(() => setShowConfetti(false), 5000)
+    if (open) {
+      getBadges().then(setBadges).catch(console.error)
+    }
+  }, [open])
+
+  // Desbloquear badge de racha
+  useEffect(() => {
+    if (open && autoUnlockStreak7 && streak >= 7) {
+      if (!badges.find(b => b.code === 'streak7')) {
+        unlockBadge('streak7', '🔥 Racha 7 días')
+          .then(updated => {
+            setBadges(updated)
+            setShowConfetti(true)
+            setTimeout(() => setShowConfetti(false), 5000)
+          })
+          .catch(console.error)
+      }
     }
   }, [open, streak, autoUnlockStreak7, badges])
 
@@ -41,13 +60,12 @@ export default function AchievementsModal({ open, onClose, autoUnlockStreak7 = f
 
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-4 backdrop-blur-lg transition-opacity duration-300" onClick={onClose}>
-      
       {showConfetti && (
         <Confetti
           width={width}
           height={height}
           numberOfPieces={300}
-          colors={['#7e22ce', '#c084fc', '#f3e8ff', '#facc15']} // Paleta de colores más rica
+          colors={['#7e22ce', '#c084fc', '#f3e8ff', '#facc15']}
           recycle={false}
           initialVelocityX={{ min: -10, max: 10 }}
           initialVelocityY={{ min: 5, max: 20 }}
@@ -56,7 +74,6 @@ export default function AchievementsModal({ open, onClose, autoUnlockStreak7 = f
       )}
 
       <div className="w-full max-w-md rounded-3xl bg-gradient-to-br from-white to-purple-50 p-8 shadow-2xl border-2 border-purple-200" onClick={e => e.stopPropagation()}>
-        
         {/* Encabezado */}
         <div className="mb-8 text-center">
           <div className="inline-block p-4 rounded-full bg-purple-100 mb-4 animate-pulse">
