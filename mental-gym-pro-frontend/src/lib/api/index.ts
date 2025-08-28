@@ -19,11 +19,10 @@ export {
 // Local data
 export { clearLegacyLocalData, clearUserScopedData } from './localData';
 
-// Progreso
-export { fetchUserProgress } from './progress';
+// ✅ Progreso — apunta al índice NUEVO del folder
+export { fetchUserProgress } from './progress/index';
 
 // Gamificación
-// Reexporta TODO lo de gamification (activos, unirse, progreso, badges, etc.)
 export * from './gamification/gamification';
 
 // Fitness
