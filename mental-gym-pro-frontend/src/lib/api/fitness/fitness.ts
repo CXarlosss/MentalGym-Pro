@@ -32,3 +32,7 @@ export const getFavoriteExercises = Local.getFavoriteExercises
 export const epley1RM = Local.epley1RM // normalmente son cálculos locales
 export const brzycki1RM = Local.brzycki1RM
 export const targetFromPercent1RM = Local.targetFromPercent1RM
+
+// ---------- GOALS ----------
+export const getGoals = Local.getGoals
+export const setGoals = Local.setGoals
