@@ -1,9 +1,10 @@
 import type { UserProgress, Challenge, DashboardStats, UserChallenge } from '@/types';
-import { USE_MOCK } from '../config'; // Si existe
-import { getJSON, get } from '../config'; // Mueve estas funciones
+/* import { USE_MOCK } from '../config'; // Si existe
+ */import { getJSON, get } from '../config'; // Mueve estas funciones
 // ===============================
 //       FUNCIONES DE SOPORTE
 // ===============================
+export const USE_MOCK = true; // ← Forzar modo mock
 
 // Header de auth tipado (evita HeadersInit union raro)
 function authHeader(): Record<string, string> {
