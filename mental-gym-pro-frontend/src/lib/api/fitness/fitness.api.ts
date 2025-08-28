@@ -88,7 +88,7 @@ export async function upsertTodayActivity(input: {
 }
 
 export async function getWeeklyActivity(): Promise<WeeklyActivitySummary> {
-  const res = await fetch(`${API}/fitness/activity/weekly`, { // <- antes: /weekly-summary
+  const res = await fetch(`${API}/fitness/activity/weekly-summary`, { // <- antes: /weekly-summary
     credentials: 'include',
     headers: withAuth(),
   });
