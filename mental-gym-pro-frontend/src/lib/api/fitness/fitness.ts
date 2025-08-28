@@ -36,3 +36,7 @@ export const targetFromPercent1RM = Local.targetFromPercent1RM
 // ---------- GOALS ----------
 export const getGoals = Local.getGoals
 export const setGoals = Local.setGoals
+
+// ---------- BADGES ----------
+export const getBadges = Local.getBadges
+export const unlockBadge  = Local.unlockBadge
