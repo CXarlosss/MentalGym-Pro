@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseResult, ExerciseSession, PaginatedExercises, ExFilters } from '@/types';
+import type { Exercise, ExerciseResult, ExerciseSession } from '@/types';
 import { USE_MOCK, getJSON, postJSON, get } from '../config';
 
 // ===============================
@@ -128,6 +128,22 @@ function normalizeExercise(e: Exercise): Exercise {
     updatedAt: e.updatedAt ?? e.createdAt ?? now,
   };
 }
+
+// Define los tipos localmente para que no haya errores de importación
+type ExFilters = {
+  page?: number;
+  limit?: number;
+  category?: string;
+  difficulty?: string;
+  q?: string;
+};
+
+type PaginatedExercises = {
+  items: Exercise[];
+  total: number;
+  page: number;
+  limit: number;
+};
 
 async function fetchExercisesMock(filters: ExFilters): Promise<PaginatedExercises> {
   const list = MOCK_EXERCISES.map(normalizeExercise);
