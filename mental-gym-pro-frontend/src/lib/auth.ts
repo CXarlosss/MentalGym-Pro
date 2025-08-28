@@ -15,18 +15,27 @@ const commonInit = (extra?: RequestInit): RequestInit => ({
   credentials: 'include',
   ...extra,
 });
+console.log('[AUTH] API_BASE =', API_BASE);
 
-export const registerUser = async (data: { name: string; email: string; password: string }): Promise<AuthResponse> => {
-  const res = await fetch(U('/auth/register'), commonInit({
+export const registerUser = async (data: { name: string; email: string; password: string }) => {
+  const url = U('/auth/register');
+  console.log('[AUTH] register ->', url, data); // 👈 NO subir passwords reales en prod
+  const res = await fetch(url, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  }));
-  const txt = await res.text();
-  const ct = res.headers.get('content-type') || '';
-  const json = ct.includes('application/json') ? JSON.parse(txt) : { message: txt };
+  });
+
+  const text = await res.text();
+  console.log('[AUTH] register status:', res.status, 'CT:', res.headers.get('content-type'));
+  console.log('[AUTH] register body:', text.slice(0, 300)); // evita spamear
+
+  const isJSON = (res.headers.get('content-type') || '').includes('application/json');
+  const json = isJSON && text ? JSON.parse(text) : { message: text };
+
   if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
-  return json as AuthResponse;
+  return json as { user: User; token?: string };
 };
 
 export const loginUser = async (data: { email: string; password: string }): Promise<AuthResponse> => {

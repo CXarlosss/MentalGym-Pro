@@ -58,8 +58,10 @@ app.options(/.*/, cors(corsOptions));   // ✅ Express 5 OK
 // ===== Middlewares base =====
 app.use(cookieParser()); // si usas cookies JWT
 app.use(express.json());
-app.use(morgan('dev'));
-
+app.use((req, _res, next) => {
+  console.log(`[REQ] ${req.method} ${req.originalUrl} origin=${req.headers.origin || 'n/a'}`);
+  next();
+});
 // ===== Salud =====
 app.get('/', (_req, res) => res.send('🔥 MentalGym Pro Backend en marcha'));
 app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));

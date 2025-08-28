@@ -14,6 +14,8 @@ router.post(
     body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
   ],
   (req, res, next) => {
+      console.log('[AUTH] /api/auth/register hit. Origin:', req.headers.origin);
+  console.log('[AUTH] body:', req.body);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
