@@ -27,7 +27,6 @@ import SearchHeader from "@/components/exercises/SearchHeader";
 import FilterPanel from "@/components/exercises/FilterPanel";
 
 import FabQuickActions from "@/components/layout/FabQuickActions";
-import StreakHeatmap from "@/components/dashboard/StreakHeatmap";
 import GoalRing from "@/components/dashboard/GoalRing";
 import AchievementsModal from "@/components/achievements/AchievementsModal";
 

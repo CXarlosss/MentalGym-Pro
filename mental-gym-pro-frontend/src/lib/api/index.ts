@@ -18,18 +18,13 @@ export {
 
 // Local data
 export { clearLegacyLocalData, clearUserScopedData } from './localData';
-
-// ✅ Progreso — apunta al índice NUEVO del folder
-export { fetchUserProgress } from './progress/progress';
-
+// Progreso
+export { fetchUserProgress, fetchActiveChallenges, fetchMyChallenges } from './progress/progress';
 // Gamificación
 export * from './gamification/gamification';
-
 // Fitness
 export * from './fitness/fitness';
-
 // Nutrición
 export * from './nutrition/nutrition';
-
 // User
 export * from './user/user.api';
