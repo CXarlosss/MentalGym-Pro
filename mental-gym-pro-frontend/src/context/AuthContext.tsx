@@ -1,33 +1,32 @@
 // src/context/AuthContext.tsx
 'use client'
+
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { registerUser, loginUser, logoutUser, getCurrentUser } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
 import { updateUserProfile } from '@/lib/api/user/user.api'
 import type { User } from '@/types'
-import { clearLegacyLocalData, clearUserScopedData } from '@/lib/api/'
+import { clearLegacyLocalData, clearUserScopedData } from '@/lib/api/config' // <- corregido
 
-// 👇 helper para derivar un ID estable
-
+// -------- helper para derivar un ID estable --------
 type MaybeIdUser = Partial<User> & {
-  _id?: string;
-  id?: string;
-  username?: string;
-};
-
-function deriveUserId(u?: MaybeIdUser | null): string | null {
-  if (!u) return null;
-
-  if (typeof u._id === 'string' && u._id) return u._id;
-  if (typeof u.id === 'string' && u.id) return u.id;
-  if (typeof u.email === 'string' && u.email) return u.email;
-  if (typeof u.username === 'string' && u.username) return u.username;
-  if (typeof u.name === 'string' && u.name) return u.name;
-
-  return null;
+  _id?: string
+  id?: string
+  username?: string
 }
 
+function deriveUserId(u?: MaybeIdUser | null): string | null {
+  if (!u) return null
+  if (typeof u._id === 'string' && u._id) return u._id
+  if (typeof u.id === 'string' && u.id) return u.id
+  if (typeof u.email === 'string' && u.email) return u.email
+  if (typeof u.username === 'string' && u.username) return u.username
+  if (typeof u.name === 'string' && u.name) return u.name
+  return null
+}
+
+// -------- tipos del contexto --------
 type AuthContextType = {
   user: User | null
   loading: boolean
@@ -48,19 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function loadUser() {
       try {
         setLoading(true)
-        const token = localStorage.getItem('token')
+
+        const token = localStorage.getItem('token') || undefined // puede ser undefined
         const cached = localStorage.getItem('user')
-        if (!token) return
 
         if (cached) {
           const u: User = JSON.parse(cached)
           setUser(u)
-          // ✅ asegura mg:userId también en hidratación desde caché
           const uid = deriveUserId(u)
           if (uid) localStorage.setItem('mg:userId', uid)
           return
         }
 
+        // intenta /users/me con o sin token (cookie o bearer)
         try {
           const u = await getCurrentUser(token)
           localStorage.setItem('user', JSON.stringify(u))
@@ -84,9 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       const { user: newUser, token } = await registerUser({ name, email, password })
       setUser(newUser)
-      localStorage.setItem('token', token)
+
+      if (token) localStorage.setItem('token', token)
+      else localStorage.removeItem('token')
+
       localStorage.setItem('user', JSON.stringify(newUser))
-      // ✅ guarda el bucket-id del usuario
+
       const uid = deriveUserId(newUser)
       if (uid) localStorage.setItem('mg:userId', uid)
 
@@ -103,9 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       const { user: loggedInUser, token } = await loginUser({ email, password })
       setUser(loggedInUser)
-      localStorage.setItem('token', token)
+
+      if (token) localStorage.setItem('token', token)
+      else localStorage.removeItem('token')
+
       localStorage.setItem('user', JSON.stringify(loggedInUser))
-      // ✅ guarda el bucket-id del usuario
+
       const uid = deriveUserId(loggedInUser)
       if (uid) localStorage.setItem('mg:userId', uid)
 
@@ -131,8 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       }
     } finally {
-      // ❗️esto NO borra tus historiales por-usuario,
-      // solo limpia estado volátil y el mg:userId actual.
+      // esto NO borra historiales por-usuario: solo estado y mg:userId
       clearUserScopedData()
 
       localStorage.removeItem('token')
@@ -154,7 +158,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(updatedUser)
       localStorage.setItem('user', JSON.stringify(updatedUser))
 
-      // ✅ por si cambió el identificador mostrado
       const uid = deriveUserId(updatedUser)
       if (uid) localStorage.setItem('mg:userId', uid)
 
