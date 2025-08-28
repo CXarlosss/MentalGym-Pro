@@ -4,41 +4,15 @@ import type { UserProgress, Challenge, DashboardStats } from '@/types';
 import { USE_MOCK, getJSON, get } from '../config';
 
 // ===============================
-//             MOCKS
-// ===============================
-// ===============================
 //       FUNCIONES DE SOPORTE
 // ===============================
+
 // Header de auth tipado (evita HeadersInit union raro)
 function authHeader(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (typeof window === 'undefined') return {};
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
-
-// Mocks para el progreso del usuario (estos no dependen de localStorage)
-export const MOCK_PROGRESS: UserProgress = {
-  weeklyData: [5, 8, 12, 10, 15, 18, 20],
-  streak: 7,
-  totalExercises: 45,
-  averageScore: 85,
-};
-
-export const MOCK_CHALLENGES: Challenge[] = [
-  {
-    _id: 'ch-1',
-    title: 'Maratón de Memoria',
-    description: 'Supera 50 niveles del juego de memoria.',
-    objective: 'Completar 50 niveles',
-    durationDays: 30,
-    isCompleted: false,
-    exercises: ['ex_mem_pairs', 'ex_attention_sel', 'ex_calc_fast'],
-    expiresAt: '2025-09-01T00:00:00Z',
-    participants: 150,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 // Lógica para leer datos locales (legacy y actuales)
 type LocalSession = {
@@ -130,6 +104,30 @@ async function fetchLocalProgress(): Promise<DashboardStats> {
 
   return { weeklyData, streak, totalExercises, averageScore }
 }
+
+// Mocks para el progreso del usuario (estos no dependen de localStorage)
+export const MOCK_PROGRESS: UserProgress = {
+  weeklyData: [5, 8, 12, 10, 15, 18, 20],
+  streak: 7,
+  totalExercises: 45,
+  averageScore: 85,
+};
+
+export const MOCK_CHALLENGES: Challenge[] = [
+  {
+    _id: 'ch-1',
+    title: 'Maratón de Memoria',
+    description: 'Supera 50 niveles del juego de memoria.',
+    objective: 'Completar 50 niveles',
+    durationDays: 30,
+    isCompleted: false,
+    exercises: ['ex_mem_pairs', 'ex_attention_sel', 'ex_calc_fast'],
+    expiresAt: '2025-09-01T00:00:00Z',
+    participants: 150,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 // ===============================
 //       FUNCIONES EXPORTADAS

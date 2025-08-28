@@ -1,4 +1,4 @@
-// src/lib/progress/progress.api.ts
+/* // src/lib/progress/progress.api.ts
 import { get } from '../config';
 import type { DashboardStats } from '@/types';
 
@@ -10,3 +10,4 @@ export async function fetchUserProgress(): Promise<DashboardStats> {
 export async function fetchActiveChallenges() {
   return get('/gamification/challenges/active');
 }
+ */
