@@ -33,8 +33,9 @@ const app = express();
 const allowed = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.CLIENT_ORIGIN, // ej: https://mental-gym-pro.netlify.app
-].filter(Boolean);
+  process.env.CLIENT_ORIGIN || '',  // si no hay, mete cadena vacía
+].map(s => s.trim()).filter(Boolean);
+
 
 // Ayuda a caches/CDN a diferenciar por Origin
 app.use((req, res, next) => {
@@ -44,27 +45,23 @@ app.use((req, res, next) => {
 
 const corsOptions = {
   origin(origin, cb) {
-    // Sin Origin (curl/Postman) o lista blanca
     if (!origin || allowed.includes(origin)) return cb(null, true);
-
-    // (opcional) permitir cualquier *.netlify.app
     try {
       const { hostname } = new URL(origin);
-      if (hostname.endsWith('.netlify.app')) return cb(null, true);
-    } catch {/* ignore */}
-
+      if (hostname.endsWith('.netlify.app')) return cb(null, true); // opcional
+    } catch {}
     return cb(new Error('CORS blocked'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  // ❌ no fijamos allowedHeaders: el middleware responde con lo que pida el preflight
-  exposedHeaders: ['Set-Cookie'],
+  // No fijamos allowedHeaders: el middleware reflejará lo solicitado en el preflight
+  exposedHeaders: ['Set-Cookie', 'X-Requested-With'],
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-// Preflight (Express 5)
-app.options('/api/*', cors(corsOptions));
+// Preflight (Express 5) — ¡NO usar '/api/*'!
+app.options('/api/:path(*)', cors(corsOptions));
 
 /* =========================
  * Middlewares base
