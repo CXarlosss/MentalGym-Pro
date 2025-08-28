@@ -1,41 +1,24 @@
-  // src/lib/api/fitness.ts
-  import { USE_MOCK } from '../config';
-  import * as Api from './fitness.api';
-  import * as Local from './fitness.local';
-// DEBUG: Verificar el valor de USE_MOCK
-console.log('🔄 USE_MOCK en fitness.ts:', USE_MOCK);
-console.log('🔄 getWeeklyActivity será:', USE_MOCK ? 'Local (mock)' : 'API');
-// Fuerza USE_MOCK a true temporalmente
+import { USE_MOCK } from '../config';
+import * as Api from './fitness.api';
+import * as Local from './fitness.local';
+
+// Fuerza MOCK consistentemente
 const FORCE_MOCK = true;
-  // ---------- GYM ----------
-  export const addGymSetToday      = USE_MOCK ? Local.addGymSetToday      : Api.addGymSetToday;
-  export const getGymWorkouts      = USE_MOCK ? Local.getGymWorkouts      : Api.getGymWorkouts;
-  export const getGymWeeklySummary = USE_MOCK ? Local.getGymWeeklySummary : Api.getGymWeeklySummary;
-  export const getGroupVolumeThisWeek = USE_MOCK ? Local.getGroupVolumeThisWeek : Api.getGroupVolumeThisWeek;
+const ACTUAL_USE_MOCK = USE_MOCK || FORCE_MOCK;
 
-  // ---------- ACTIVITY (pasos) ----------
-  export const getActivities       = USE_MOCK ? Local.getActivities       : Api.getActivities;
-  export const upsertTodayActivity = USE_MOCK ? Local.upsertTodayActivity : Api.upsertTodayActivity;
-  export const getWeeklyActivity   = FORCE_MOCK ? Local.getWeeklyActivity   : Api.getWeeklyActivity;
+console.log('🔍 USE_MOCK en fitness.ts:', ACTUAL_USE_MOCK);
 
-  // ---------- CARDIO ----------
-  export const addCardioToday = USE_MOCK ? Local.addCardioToday : Api.addCardioToday;
-  export const getCardioWeek  = USE_MOCK ? Local.getCardioWeek  : Api.getCardioWeek;
+// ---------- ACTIVITY (pasos) ----------
+export const getActivities = ACTUAL_USE_MOCK ? Local.getActivities : Api.getActivities;
+export const upsertTodayActivity = ACTUAL_USE_MOCK ? Local.upsertTodayActivity : Api.upsertTodayActivity;
+export const getWeeklyActivity = ACTUAL_USE_MOCK ? Local.getWeeklyActivity : Api.getWeeklyActivity;
 
-  // ---------- Solo-local (LS) ----------
-  export {
-    getRoutines,
-    saveRoutine,
-    duplicateRoutine,
-    seedDefaultRoutinesOnce,
-    toggleFavoriteExercise,
-    getFavoriteExercises,
-    getGoals,
-    setGoals,
-    getBadges,
-    unlockBadge,
-    // helpers de fuerza
-    epley1RM,
-    brzycki1RM,
-    targetFromPercent1RM,
-  } from './fitness.local';
+// ---------- GYM ----------
+export const addGymSetToday = ACTUAL_USE_MOCK ? Local.addGymSetToday : Api.addGymSetToday;
+export const getGymWorkouts = ACTUAL_USE_MOCK ? Local.getGymWorkouts : Api.getGymWorkouts;
+export const getGymWeeklySummary = ACTUAL_USE_MOCK ? Local.getGymWeeklySummary : Api.getGymWeeklySummary;
+export const getGroupVolumeThisWeek = ACTUAL_USE_MOCK ? Local.getGroupVolumeThisWeek : Api.getGroupVolumeThisWeek;
+
+// ---------- CARDIO ----------
+export const addCardioToday = ACTUAL_USE_MOCK ? Local.addCardioToday : Api.addCardioToday;
+export const getCardioWeek = ACTUAL_USE_MOCK ? Local.getCardioWeek : Api.getCardioWeek;
