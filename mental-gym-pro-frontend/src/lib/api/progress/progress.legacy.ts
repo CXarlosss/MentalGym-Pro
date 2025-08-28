@@ -1,4 +1,4 @@
-// src/lib/api/progress.ts
+/* // src/lib/api/progress.ts
 import type { UserProgress, Challenge } from '@/types';
 import { USE_MOCK, getJSON } from '../config';
 
@@ -75,3 +75,4 @@ export async function fetchActiveChallenges(): Promise<Challenge[]> {
     return MOCK_CHALLENGES;
   }
 }
+ */
