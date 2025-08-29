@@ -271,7 +271,7 @@ export async function completeExercise(
   sessionId: string,
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
-  if (USE_MOCK || sessionId.startsWith('sess_')) {
+  if (ACTUAL_USE_MOCK || sessionId.startsWith('sess_')) {  // ← Cambiado
     ensureUserBucketId()
     const arr = readLocalSessions()
     const i = arr.findIndex(s => s._id === sessionId)
