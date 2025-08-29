@@ -6,6 +6,10 @@ import { USE_MOCK, get, postJSON, patchJSON, del, getJSON } from '../config';
  * Gamificación: API + soporte MOCK local por usuario
  */
 
+// Fuerza MOCK aquí también (ponlo en false cuando tengas backend real)
+const FORCE_MOCK = true;
+const ACTUAL_USE_MOCK = USE_MOCK || FORCE_MOCK;
+
 // -------------- Utils LS por usuario + eventos --------------
 const uid = (): string => {
   if (typeof window === 'undefined') return 'anonymous';
@@ -81,7 +85,7 @@ const FALLBACK_CHALLENGES: Challenge[] = [
   },
 ];
 
-// Según tus errores, `Badge` es minimal (p.ej., { code; title })
+// `Badge` minimal: { code; title }
 const FALLBACK_BADGES: Badge[] = [
   { code: 'streak_7', title: 'Racha de 7 días' } as Badge,
   { code: 'first_challenge', title: 'Primer desafío' } as Badge,
@@ -98,7 +102,7 @@ function authHeader(): Record<string, string> {
 //                  CHALLENGES (Catálogo)
 // =====================================================
 export async function fetchActiveChallenges(): Promise<Challenge[]> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     return FALLBACK_CHALLENGES;
   }
   return getJSON<Challenge[]>(
@@ -108,14 +112,14 @@ export async function fetchActiveChallenges(): Promise<Challenge[]> {
 }
 
 export async function fetchAllChallenges(): Promise<Challenge[]> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     return FALLBACK_CHALLENGES;
   }
   return get<Challenge[]>('/gamification/challenges', { headers: authHeader() });
 }
 
 export async function fetchChallengeById(id: string): Promise<Challenge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const c = FALLBACK_CHALLENGES.find((x) => x._id === id);
     if (!c) throw new Error('Desafío no encontrado (mock)');
     return c;
@@ -127,7 +131,7 @@ export async function fetchChallengeById(id: string): Promise<Challenge> {
 //               CHALLENGES (Admin)
 // =====================================================
 export async function createChallenge(body: Partial<Challenge>): Promise<Challenge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const nowIso = new Date().toISOString();
     const newCh: Challenge = {
       _id: `ch_${Math.random().toString(36).slice(2, 10)}`,
@@ -150,7 +154,7 @@ export async function createChallenge(body: Partial<Challenge>): Promise<Challen
 }
 
 export async function updateChallenge(id: string, body: Partial<Challenge>): Promise<Challenge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const i = FALLBACK_CHALLENGES.findIndex((c) => c._id === id);
     if (i === -1) throw new Error('Desafío no encontrado (mock)');
     const updatedCh: Challenge = {
@@ -166,7 +170,7 @@ export async function updateChallenge(id: string, body: Partial<Challenge>): Pro
 }
 
 export async function deleteChallenge(id: string): Promise<{ ok: boolean }> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const i = FALLBACK_CHALLENGES.findIndex((c) => c._id === id);
     if (i !== -1) FALLBACK_CHALLENGES.splice(i, 1);
     emitChallengesChanged();
@@ -179,7 +183,7 @@ export async function deleteChallenge(id: string): Promise<{ ok: boolean }> {
 //         CHALLENGES (Mi estado / progreso)
 // =====================================================
 export async function joinChallenge(id: string): Promise<UserChallenge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const u = uid();
     const k = joinedKey(u);
     const s = readSet(k);
@@ -206,7 +210,7 @@ export async function updateMyChallengeProgress(
   id: string,
   body: { progress?: number; isCompleted?: boolean }
 ): Promise<UserChallenge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const u = uid();
     if (body.isCompleted) {
       const kc = completedKey(u);
@@ -231,7 +235,7 @@ export async function updateMyChallengeProgress(
 }
 
 export async function fetchMyChallenges(): Promise<UserChallenge[]> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const u = uid();
     const joined = readSet(joinedKey(u));
     const completed = readSet(completedKey(u));
@@ -260,12 +264,8 @@ export async function fetchMyChallenges(): Promise<UserChallenge[]> {
 // =====================================================
 //                          BADGES
 // =====================================================
-
-/**
- * NOTA: Tu tipo `Badge` parece minimal (sin _id/fechas). En mock usamos `code` como identificador.
- */
 export async function fetchBadges(): Promise<Badge[]> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     return FALLBACK_BADGES;
   }
   return get<Badge[]>('/gamification/badges', { headers: authHeader() });
@@ -274,7 +274,7 @@ export async function fetchBadges(): Promise<Badge[]> {
 export async function createBadge(
   body: Pick<Badge, 'code' | 'title'> & Partial<Badge>
 ): Promise<Badge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const exists = FALLBACK_BADGES.some((b) => b.code === body.code);
     if (!exists) {
       FALLBACK_BADGES.push({ code: body.code, title: body.title } as Badge);
@@ -285,7 +285,7 @@ export async function createBadge(
 }
 
 export async function updateBadge(id: string, body: Partial<Badge>): Promise<Badge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const i = FALLBACK_BADGES.findIndex((b) => b.code === id);
     if (i === -1) throw new Error('Badge no encontrado (mock)');
     const updated: Badge = { ...FALLBACK_BADGES[i], ...body } as Badge;
@@ -296,7 +296,7 @@ export async function updateBadge(id: string, body: Partial<Badge>): Promise<Bad
 }
 
 export async function deleteBadge(id: string): Promise<{ ok: boolean }> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const i = FALLBACK_BADGES.findIndex((b) => b.code === id);
     if (i !== -1) FALLBACK_BADGES.splice(i, 1);
     return { ok: true };
@@ -305,7 +305,7 @@ export async function deleteBadge(id: string): Promise<{ ok: boolean }> {
 }
 
 export async function fetchMyBadges(): Promise<UserBadge[]> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const u = uid();
     const set = readSet(myBadgesKey(u)); // guardamos codes
     const nowIso = new Date().toISOString();
@@ -324,7 +324,7 @@ export async function fetchMyBadges(): Promise<UserBadge[]> {
 }
 
 export async function unlockBadgeForMe(badgeId: string): Promise<UserBadge> {
-  if (USE_MOCK) {
+  if (ACTUAL_USE_MOCK) {
     const u = uid();
     const set = readSet(myBadgesKey(u));
     set.add(badgeId); // guardamos por code
