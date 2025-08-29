@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext'
 import { fetchExercise } from '@/lib/api/cognitive/exercises'
 
 // 👇 PERO estas dos venidas del índice (sessionController)
-import { startExerciseSession, completeExercise } from '@/lib/api/'
+import { startExerciseSession, completeExercise } from '@/lib/api/cognitive/sessionController'
 
 import ExerciseHeader from '@/components/exercises/detail/ExerciseHeader'
 import ExerciseInstructions from '@/components/exercises/detail/ExerciseInstruction'
