@@ -428,6 +428,12 @@ export default function DesafiosPage() {
                       )}
 
                       {/* Acceso rápido a ejercicios (lleva a retos mentales) */}
+                      {/* Ir al detalle del desafío */}
+                      <Link href={`/dashboard/desafios/${c._id}`}>
+                        <Button variant="ghost">Ver reto</Button>
+                      </Link>
+
+                      {/* Acceso rápido a ejercicios */}
                       <Link href="/dashboard/retosmentales">
                         <Button variant="outline">Ver ejercicios</Button>
                       </Link>
