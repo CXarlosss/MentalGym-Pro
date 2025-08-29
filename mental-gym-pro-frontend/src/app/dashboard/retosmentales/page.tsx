@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { fetchExercises, fetchExerciseCategories } from '@/lib/api/cognitive/exercises'
+import { fetchExercises, fetchExerciseCategories } from '@/lib/api/'
 import ExerciseCard from '@/components/cards/ExerciseCard'
 import FilterPanel from '@/components/exercises/FilterPanel'
 import SearchHeader from '@/components/exercises/SearchHeader'
