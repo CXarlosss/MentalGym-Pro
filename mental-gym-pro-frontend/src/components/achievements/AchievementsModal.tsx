@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getBadges, unlockBadge } from '@/lib/api/'
+import { getBadges, unlockBadge } from '@/lib/api/fitness/fitness'
 import dynamic from 'next/dynamic'
 import type { Badge } from '@/types'
 
