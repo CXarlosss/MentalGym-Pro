@@ -329,7 +329,7 @@ export async function fetchExerciseCategories(): Promise<string[]> {
 // ===============================
 //        SESIONES (API)
 // ===============================
-export async function startExerciseSession(exerciseId: string): Promise<{ _id: string }> {
+/* export async function startExerciseSession(exerciseId: string): Promise<{ _id: string }> {
   if (ACTUAL_USE_MOCK) {
     return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
   }
@@ -355,9 +355,9 @@ export async function startExerciseSession(exerciseId: string): Promise<{ _id: s
     return { _id: `sess_${Math.random().toString(36).slice(2, 11)}` };
   }
   throw (lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? 'Cannot start session')));
-}
+} */
 
-export async function completeExercise(
+/* export async function completeExercise(
   sessionId: string,
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
@@ -396,8 +396,8 @@ export async function completeExercise(
     createdAt: new Date().toISOString(),
     metadata: data.metadata,
   };
-}
+} */
 
-export async function fetchMySessions(): Promise<ExerciseSession[]> {
+/* export async function fetchMySessions(): Promise<ExerciseSession[]> {
   return tryGet<ExerciseSession[]>(['/cognitive/sessions', '/sessions']);
-}
+} */
