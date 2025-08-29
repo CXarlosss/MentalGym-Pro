@@ -180,7 +180,12 @@ const COMPLETE_PATHS = (id: string) => [
 //       LISTAR MIS SESIONES
 // ===============================
 export async function fetchMySessions(): Promise<ExerciseSession[]> {
+  console.log('fetchMySessions - ACTUAL_USE_MOCK:', ACTUAL_USE_MOCK);
+      console.log('➡️ Calling fetchMySessions...'); // Log at the start of the function
+
   if (ACTUAL_USE_MOCK) {
+            console.log('✅ fetchMySessions: Using MOCK logic.');
+
     const arr = readLocalSessions()
     return arr
       .slice()
@@ -193,6 +198,8 @@ export async function fetchMySessions(): Promise<ExerciseSession[]> {
   }
 
   try {
+            console.log('🌐 fetchMySessions: Using backend logic.');
+
     const sessions = await getJSON<SessionApiShape[]>(LIST_PATHS)
     return sessions.map(normalizeSessionFromApi)
   } catch (err) {
@@ -202,135 +209,144 @@ export async function fetchMySessions(): Promise<ExerciseSession[]> {
 }
 
 
+
 // ===============================
-//     CREAR / INICIAR SESIÓN
+//     CREAR / INICIAR SESIÓN
 // ===============================
 export async function startExerciseSession(
-  exerciseId: string,
-  opts?: {
-    title?: string
-    category?: string
-    score?: number
-    durationMin?: number
-    timeSpentSec?: number
-    playedAt?: string | Date
-  }
+  exerciseId: string,
+  opts?: {
+    title?: string
+    category?: string
+    score?: number
+    durationMin?: number
+    timeSpentSec?: number
+    playedAt?: string | Date
+  }
 ): Promise<{ _id: string }> {
-  if (ACTUAL_USE_MOCK) {
-    ensureUserBucketId()
-    const now = new Date()
-    const id = `sess_${Math.random().toString(36).slice(2, 11)}`
-    const iso = now.toISOString()
-    const startedAtIso =
-      opts?.playedAt
-        ? typeof opts.playedAt === 'string'
-          ? opts.playedAt
-          : (opts.playedAt as Date).toISOString()
-        : iso
+    console.log(`➡️ Calling startExerciseSession with exerciseId: ${exerciseId}`); // Log at the start of the function
+  if (ACTUAL_USE_MOCK) {
+        console.log('✅ startExerciseSession: Using MOCK logic.');
+    ensureUserBucketId()
+    const now = new Date()
+    const id = `sess_${Math.random().toString(36).slice(2, 11)}`
+    const iso = now.toISOString()
+    const startedAtIso =
+      opts?.playedAt
+        ? typeof opts.playedAt === 'string'
+          ? opts.playedAt
+          : (opts.playedAt as Date).toISOString()
+        : iso
 
-    const local: LocalSession = {
-      _id: id,
-      user: 'me',
-      exercise: { _id: exerciseId, title: opts?.title, category: opts?.category },
-      score: opts?.score,
-      durationMin: opts?.durationMin,
-      startedAt: startedAtIso,
-      createdAt: iso,
-      updatedAt: iso,
-    }
+    const local: LocalSession = {
+      _id: id,
+      user: 'me',
+      exercise: { _id: exerciseId, title: opts?.title, category: opts?.category },
+      score: opts?.score,
+      durationMin: opts?.durationMin,
+      startedAt: startedAtIso,
+      createdAt: iso,
+      updatedAt: iso,
+    }
 
-    const arr = readLocalSessions()
-    arr.push(local)
-    writeLocalSessions(arr)
-    return { _id: id }
-  }
+    const arr = readLocalSessions()
+    arr.push(local)
+    writeLocalSessions(arr)
+        console.log(`✅ Session started successfully (MOCK), ID: ${id}`);
+    return { _id: id }
+  }
 
-  const body: Record<string, unknown> = { exerciseId }
-  if (opts?.score != null) body.score = opts.score
-  if (opts?.durationMin != null) body.durationMin = opts.durationMin
-  if (opts?.timeSpentSec != null) body.timeSpentSec = opts.timeSpentSec
-  if (opts?.playedAt) body.playedAt = opts.playedAt
+  const body: Record<string, unknown> = { exerciseId }
+  if (opts?.score != null) body.score = opts.score
+  if (opts?.durationMin != null) body.durationMin = opts.durationMin
+  if (opts?.timeSpentSec != null) body.timeSpentSec = opts.timeSpentSec
+  if (opts?.playedAt) body.playedAt = opts.playedAt
 
-  let lastErr: unknown
-  for (const path of CREATE_PATHS) {
-    try {
-      const created = await postJSON<{ _id?: string }>(path, body)
-      if (typeof created?._id === 'string' && created._id) return { _id: created._id }
-      lastErr = new Error('Respuesta sin _id')
-    } catch (e) {
-      lastErr = e
-    }
-  }
-  throw (lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? 'Cannot start session')))
+  let lastErr: unknown
+  for (const path of CREATE_PATHS) {
+        console.log(`🌐 startExerciseSession: Trying backend path: ${path}`);
+    try {
+      const created = await postJSON<{ _id?: string }>(path, body)
+      if (typeof created?._id === 'string' && created._id) {
+            console.log(`✅ Session started successfully (backend), ID: ${created._id}`);
+            return { _id: created._id };
+        }
+      lastErr = new Error('Respuesta sin _id')
+    } catch (e) {
+        console.warn(`❌ startExerciseSession: Path ${path} failed. Error: ${e}`);
+      lastErr = e
+    }
+  }
+  throw (lastErr instanceof Error ? lastErr : new Error(String(lastErr ?? 'Cannot start session')))
 }
 
 // ===============================
-//         COMPLETAR SESIÓN
+//         COMPLETAR SESIÓN
 // ===============================
 export async function completeExercise(
-  sessionId: string,
-  data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
+  sessionId: string,
+  data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
-  // Lógica de MOCK (o si el ID es de mock)
-  if (ACTUAL_USE_MOCK || sessionId.startsWith('sess_')) {
-    ensureUserBucketId()
-    const arr = readLocalSessions()
-    const i = arr.findIndex(s => s._id === sessionId)
-    const nowIso = new Date().toISOString()
+    console.log(`➡️ Calling completeExercise for session ID: ${sessionId}`); // Log at the start of the function
+  
+  // Lógica de MOCK (o si el ID es de mock)
+  if (ACTUAL_USE_MOCK || sessionId.startsWith('sess_')) {
+        console.log('✅ completeExercise: Using MOCK logic.');
+    ensureUserBucketId()
+    const arr = readLocalSessions()
+    const i = arr.findIndex(s => s._id === sessionId)
+    const nowIso = new Date().toISOString()
 
-    if (i !== -1) {
-      const minutes =
-        data.timeSpent > 0
-          ? Math.max(1, Math.round(data.timeSpent / 60))
-          : Math.max(
-              1,
-              Math.round((new Date(nowIso).getTime() - new Date(arr[i].startedAt).getTime()) / 60000)
-            )
+    if (i !== -1) {
+      const minutes =
+        data.timeSpent > 0
+          ? Math.max(1, Math.round(data.timeSpent / 60))
+          : Math.max(
+              1,
+              Math.round((new Date(nowIso).getTime() - new Date(arr[i].startedAt).getTime()) / 60000)
+            )
 
-      arr[i] = {
-        ...arr[i],
-        score: data.score,
-        durationMin: minutes,
-        endedAt: nowIso,
-        updatedAt: nowIso,
-      }
-      writeLocalSessions(arr)
-    }
+      arr[i] = {
+        ...arr[i],
+        score: data.score,
+        durationMin: minutes,
+        endedAt: nowIso,
+        updatedAt: nowIso,
+      }
+      writeLocalSessions(arr)
+    console.log(`✅ Session completed successfully (MOCK). Score: ${data.score}`);
+    }
 
-    return {
-      _id: `res_${Math.random().toString(36).slice(2, 11)}`,
-      sessionId,
-      score: data.score,
-      timeSpent: data.timeSpent,
-      createdAt: nowIso,
-      metadata: data.metadata,
-    }
-  }
+    return {
+      _id: `res_${Math.random().toString(36).slice(2, 11)}`,
+      sessionId,
+      score: data.score,
+      timeSpent: data.timeSpent,
+      createdAt: nowIso,
+      metadata: data.metadata,
+    }
+  }
 
-  // Lógica de backend
-  for (const p of COMPLETE_PATHS(sessionId)) {
-    try {
-      return await postJSON<ExerciseResult>(p, data)
-    } catch {
-      // probar siguiente
-    }
-  }
+  // Lógica de backend
+  for (const p of COMPLETE_PATHS(sessionId)) {
+        console.log(`🌐 completeExercise: Trying backend path: ${p}`);
+    try {
+      return await postJSON<ExerciseResult>(p, data)
+    } catch {
+        console.warn(`❌ completeExercise: Path ${p} failed.`);
+      // probar siguiente
+    }
+  }
 
-  // Fallback si todos los backends fallan
-  const nowIso = new Date().toISOString()
-  return {
-    _id: `res_${Math.random().toString(36).slice(2, 11)}`,
-    sessionId,
-    score: data.score,
-    timeSpent: data.timeSpent,
-    createdAt: nowIso,
-    metadata: data.metadata,
-  }
-}
-
-// Asegúrate de exportar todas las funciones necesarias
-export default {
-  fetchMySessions,
-  startExerciseSession,
-  completeExercise
+  // Fallback si todos los backends fallan
+  const nowIso = new Date().toISOString()
+    console.log('⚠️ completeExercise: All backend paths failed, returning fallback result.');
+  return {
+    _id: `res_${Math.random().toString(36).slice(2, 11)}`,
+    sessionId,
+    score: data.score,
+    timeSpent: data.timeSpent,
+    createdAt: nowIso,
+    metadata: data.metadata,
+  }
 }
