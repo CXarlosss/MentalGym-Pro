@@ -54,12 +54,14 @@ export default function ChallengeItem({ challenge }: { challenge: Challenge }) {
             ? `Expira: ${new Date(challenge.expiresAt).toLocaleDateString('es-ES')}`
             : `${challenge.durationDays} días`}
         </span>
-        <Link
-          href={`/dashboard/desafios/${challenge._id}`} // ✅ ruta correcta
-          className="text-indigo-600 hover:text-indigo-800 font-medium"
-        >
-          {isCompleted ? 'Ver resultado' : 'Continuar'}
-        </Link>
+       <Link
+  href="/dashboard/desafios"
+  className="text-indigo-600 hover:text-indigo-800 font-medium"
+>
+  {isCompleted ? 'Ver resultado' : 'Continuar'}
+</Link>
+
+        
       </div>
     </div>
   )
