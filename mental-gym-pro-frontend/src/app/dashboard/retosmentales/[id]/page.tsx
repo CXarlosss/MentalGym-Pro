@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 
 // 👇 Mantén fetchExercise aquí
-import { fetchExercise } from '@/lib/api/'
+import { fetchExercise } from '@/lib/api/cognitive/exercises'
 
 // 👇 PERO estas dos venidas del índice (sessionController)
 import { startExerciseSession, completeExercise } from '@/lib/api/'
