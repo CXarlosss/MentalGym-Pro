@@ -180,7 +180,7 @@ const COMPLETE_PATHS = (id: string) => [
 //       LISTAR MIS SESIONES
 // ===============================
 export async function fetchMySessions(): Promise<ExerciseSession[]> {
-  if (ACTUAL_USE_MOCK) {  // ← Cambiado
+  if (ACTUAL_USE_MOCK) {
     const arr = readLocalSessions()
     return arr
       .slice()
@@ -216,7 +216,7 @@ export async function startExerciseSession(
     playedAt?: string | Date
   }
 ): Promise<{ _id: string }> {
-  if (ACTUAL_USE_MOCK) {  // ← Cambiado
+  if (ACTUAL_USE_MOCK) {
     ensureUserBucketId()
     const now = new Date()
     const id = `sess_${Math.random().toString(36).slice(2, 11)}`
@@ -271,7 +271,8 @@ export async function completeExercise(
   sessionId: string,
   data: { score: number; timeSpent: number; metadata: Record<string, unknown> }
 ): Promise<ExerciseResult> {
-  if (ACTUAL_USE_MOCK || sessionId.startsWith('sess_')) {  // ← Cambiado
+  // Lógica de MOCK (o si el ID es de mock)
+  if (ACTUAL_USE_MOCK || sessionId.startsWith('sess_')) {
     ensureUserBucketId()
     const arr = readLocalSessions()
     const i = arr.findIndex(s => s._id === sessionId)
@@ -306,6 +307,7 @@ export async function completeExercise(
     }
   }
 
+  // Lógica de backend
   for (const p of COMPLETE_PATHS(sessionId)) {
     try {
       return await postJSON<ExerciseResult>(p, data)
@@ -314,6 +316,7 @@ export async function completeExercise(
     }
   }
 
+  // Fallback si todos los backends fallan
   const nowIso = new Date().toISOString()
   return {
     _id: `res_${Math.random().toString(36).slice(2, 11)}`,
