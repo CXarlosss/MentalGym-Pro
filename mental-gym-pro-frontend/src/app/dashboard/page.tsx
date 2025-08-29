@@ -14,19 +14,12 @@ import { fetchActiveChallenges, fetchMyChallenges } from '@/lib/api/gamification
 import { fetchRecentExercises, fetchExercises, fetchExerciseCategories } from "@/lib/api/cognitive/exercises";
 import { getWeeklyActivity } from "@/lib/api/fitness/fitness";
 import { getTodayNutrition, getNutritionTargets } from "@/lib/api/nutrition/nutrition";
-// Or import them directly as well if they're also in separate files
-// En tu dashboard page.tsx, antes del useEffect
-console.log('🔄 Import check - fetchActiveChallenges:', typeof fetchActiveChallenges);
-console.log('🔄 Import check - fetchUserProgress:', typeof fetchUserProgress);
-console.log('🔄 Import check - fetchMyChallenges:', typeof fetchMyChallenges);
+import { CHALLENGES, getMyChallengesClient } from '@/lib/api/static/challenges';
 
-// Agrega esto también en el useEffect antes de llamar a las funciones
 console.log('📞 Pre-call check - fetchActiveChallenges:', typeof fetchActiveChallenges);
-if (typeof fetchActiveChallenges !== 'function') {
-  console.error('❌ fetchActiveChallenges is not a function! Value:', fetchActiveChallenges);
-  throw new Error('fetchActiveChallenges is not a function');
+ if (typeof fetchActiveChallenges !== 'function') {
+   console.warn('⚠️ fetchActiveChallenges no es función; usaré fallback local (CHALLENGES).');
 }
-
 import ProgressChart from "@/components/dashboard/ProgressChart";
 import ExerciseCard from "@/components/cards/ExerciseCard";
 import ChallengeItem from "@/components/exercises/ChallengeItem";
@@ -185,85 +178,106 @@ export default function DashboardPage() {
     },
     [scrollToId]
   );
+const safeFetchActiveChallenges = async () => {
+  try {
+    if (typeof fetchActiveChallenges === 'function') {
+      const data = await fetchActiveChallenges();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {
+    console.warn('fallback CHALLENGES por error en fetchActiveChallenges:', e);
+  }
+  return CHALLENGES;
+};
+
+const safeFetchMyChallenges = async () => {
+  try {
+    if (typeof fetchMyChallenges === 'function') {
+      const data = await fetchMyChallenges();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {
+    console.warn('fallback getMyChallengesClient por error en fetchMyChallenges:', e);
+  }
+  return getMyChallengesClient();
+};
+
 
   // ---------- Carga inicial ----------
   useEffect(() => {
-  async function loadDashboardData() {
-    try {
-      setLoading(true);
-      console.log('Iniciando carga de datos del dashboard...');
+async function loadDashboardData() {
+  try {
+    setLoading(true);
+    console.log('Iniciando carga de datos del dashboard...');
 
-      const [
-        progress,
-        challenges,
-        recent,
-        allExercises,
-        cats,
-        wAct,
-        todayData,
-        targetsData,
-        mine,
-      ] = await Promise.all([
-        fetchUserProgress(),
-        fetchActiveChallenges(),
-        fetchRecentExercises(3),
-        fetchExercises(),
-        fetchExerciseCategories(),
-        getWeeklyActivity(),
-        getTodayNutrition(),
-        getNutritionTargets(),
-        fetchMyChallenges(),
-      ]);
+    const [
+      progress,
+      recent,
+      allExercises,
+      cats,
+      wAct,
+      todayData,
+      targetsData,
+    ] = await Promise.all([
+      fetchUserProgress(),
+      fetchRecentExercises(3),
+      fetchExercises(),
+      fetchExerciseCategories(),
+      getWeeklyActivity(),
+      getTodayNutrition(),
+      getNutritionTargets(),
+    ]);
 
-      setData({
-        weeklyData: progress.weeklyData,
-        streak: progress.streak,
-        totalExercises: progress.totalExercises,
-        averageScore: progress.averageScore,
-        recentExercises: recent,
-        activeChallenges: challenges,
-      });
+    // Retos (seguro con fallback)
+    const [active, mine] = await Promise.all([
+      safeFetchActiveChallenges(),
+      safeFetchMyChallenges(),
+    ]);
 
-      const list = Array.isArray(allExercises) ? allExercises : allExercises.items;
-      setExercises(list);
-      setCategories(cats);
-      setWeekAct(wAct);
+    setData({
+      weeklyData: progress.weeklyData,
+      streak: progress.streak,
+      totalExercises: progress.totalExercises,
+      averageScore: progress.averageScore,
+      recentExercises: recent,
+      activeChallenges: active,
+    });
 
-      setToday(todayData);
-      setTargets(targetsData);
-      setMyChallenges(mine);
-      
-    } catch (err) {
-      console.error('Error en loadDashboardData:', err);
-      
-      // Verificación de tipo para TypeScript
-      if (err instanceof Error) {
-        console.error('Error stack:', err.stack);
-        console.error('Error message:', err.message);
-        setError("Error al cargar los datos del dashboard: " + err.message);
-      } else {
-        console.error('Error desconocido:', err);
-        setError("Error al cargar los datos del dashboard");
-      }
-      
-    } finally {
-      setLoading(false);
+    const list = Array.isArray(allExercises) ? allExercises : allExercises.items;
+    setExercises(list);
+    setCategories(cats);
+    setWeekAct(wAct);
+    setToday(todayData);
+    setTargets(targetsData);
+    setMyChallenges(mine);
+
+  } catch (err) {
+    console.error('Error en loadDashboardData:', err);
+    if (err instanceof Error) {
+      setError("Error al cargar los datos del dashboard: " + err.message);
+    } else {
+      setError("Error al cargar los datos del dashboard");
     }
+  } finally {
+    setLoading(false);
   }
+}
+
   
   if (user) loadDashboardData();
 }, [user]);
-
-  // Refrescar desafíos cuando cambie el estado local (join/complete)
-  const refreshChallenges = useCallback(async () => {
-    try {
-      const [active, mine] = await Promise.all([fetchActiveChallenges(), fetchMyChallenges()]);
-      setData((prev) => (prev ? { ...prev, activeChallenges: active } : prev));
-      setMyChallenges(mine);
-    } catch {
-      // ignoramos errores de refresco puntual
-    }
-  }, []);
+const refreshChallenges = useCallback(async () => {
+  try {
+    const [active, mine] = await Promise.all([
+      safeFetchActiveChallenges(),
+      safeFetchMyChallenges(),
+    ]);
+    setData((prev) => (prev ? { ...prev, activeChallenges: active } : prev));
+    setMyChallenges(mine);
+  } catch {
+    // ignoramos errores de refresco puntual
+  }
+}, []);
 
   useEffect(() => {
     const handler = () => refreshChallenges();
