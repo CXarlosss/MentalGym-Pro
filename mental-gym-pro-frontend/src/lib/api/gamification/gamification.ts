@@ -1,4 +1,4 @@
-// src/lib/gamification/gamification.ts
+// src/lib/api/gamification/gamification.ts
 import type { Challenge, UserChallenge, Badge, UserBadge } from '@/types';
 import { USE_MOCK, get, postJSON, patchJSON, del, getJSON } from '../config';
 

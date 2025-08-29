@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchUserProgress } from "@/lib/api/progress/progress";
 
 // Keep the rest of your imports as they were, but separated
-import { fetchActiveChallenges, fetchMyChallenges } from "@/lib/api/gamification/gamification";
+import { fetchActiveChallenges, fetchMyChallenges } from '@/lib/api/gamification/gamification';
 import { fetchRecentExercises, fetchExercises, fetchExerciseCategories } from "@/lib/api/cognitive/exercises";
 import { getWeeklyActivity } from "@/lib/api/fitness/fitness";
 import { getTodayNutrition, getNutritionTargets } from "@/lib/api/nutrition/nutrition";
