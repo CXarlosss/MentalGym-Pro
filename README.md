@@ -81,27 +81,7 @@ cd backend
 npm install
 ```
 
-### 3️⃣ Configuración Backend
 
-Crear un archivo `.env` en la carpeta backend con las siguientes variables:
-
-```env
-PORT=5000
-MONGO_URI=mongodb+srv://<usuario>:<password>@cluster0.mongodb.net/mental-gym
-JWT_SECRET=tu_secreto_jwt_aqui
-```
-
-Ejecutar en modo desarrollo:
-```bash
-npm run dev
-```
-
-Opcional: poblar base de datos con ejercicios:
-```bash
-npm run seed
-# o para reiniciar la colección
-npm run seed:wipe
-```
 
 ### 4️⃣ Frontend
 ```bash
